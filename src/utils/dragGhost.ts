@@ -71,3 +71,4 @@ export function setCustomHeroDragImage(e: React.DragEvent, hero: Hero) {
     ghost.remove();
   }, 100);
 }
+

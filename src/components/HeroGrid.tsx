@@ -319,7 +319,7 @@ export const HeroGrid: React.FC = () => {
       {/* Dense Circular Hero Avatar Grid with Stable Reserved Scrollbar Gutter */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 min-h-0 overflow-y-scroll pr-1"
+        className="flex-1 min-h-0 overflow-y-auto pr-1"
         style={{ scrollbarGutter: 'stable' }}
       >
         <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
