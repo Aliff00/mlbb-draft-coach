@@ -431,7 +431,7 @@ export const HeroGrid: React.FC = () => {
               bluePicks.some((p) => p?.id === hero.id) ||
               redPicks.some((p) => p?.id === hero.id);
 
-            const isSelected = selectedHero?.id === hero.id;
+            const isSelected = Boolean(activeSlot && selectedHero?.id === hero.id);
             const isInspected = inspectedHero?.id === hero.id;
             const isCounterRec = topCounterHeroIds.has(String(hero.id));
             const isSynergyRec = topSynergyHeroIds.has(String(hero.id));
@@ -460,7 +460,11 @@ export const HeroGrid: React.FC = () => {
                 onClick={() => {
                   if (disabled) return;
                   if (!activeSlot) {
-                    setInspectedHero(hero);
+                    if (inspectedHero?.id === hero.id) {
+                      setInspectedHero(null);
+                    } else {
+                      setInspectedHero(hero);
+                    }
                   } else {
                     placeHero(hero);
                   }

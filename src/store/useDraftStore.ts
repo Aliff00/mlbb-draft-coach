@@ -234,7 +234,7 @@ export const useDraftStore = create<DraftState>((set, get) => ({
 
   setActiveSlot: (activeSlot) => {
     if (!activeSlot) {
-      set({ activeSlot: null, freePracticeTarget: null });
+      set({ activeSlot: null, freePracticeTarget: null, selectedHero: null });
       return;
     }
 
@@ -246,20 +246,26 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       current.index === activeSlot.index
     ) {
       // Toggle unselect when clicking the currently active target slot again
-      set({ activeSlot: null, freePracticeTarget: null });
+      set({ activeSlot: null, freePracticeTarget: null, selectedHero: null });
       return;
     }
+
+    const state = get();
+    const picks = activeSlot.team === 'BLUE' ? state.bluePicks : state.redPicks;
+    const bans = activeSlot.team === 'BLUE' ? state.blueBans : state.redBans;
+    const slotHero = activeSlot.type === 'PICK' ? picks[activeSlot.index] : bans[activeSlot.index];
 
     const nextLane =
       activeSlot.type === 'PICK' && activeSlot.index >= 0 && activeSlot.index < DEDICATED_LANES.length
         ? DEDICATED_LANES[activeSlot.index].lane
-        : get().laneFilter;
+        : state.laneFilter;
 
     set({
       activeSlot,
       freePracticeTarget: activeSlot,
       laneFilter: nextLane,
       inspectedHero: null,
+      selectedHero: slotHero || null,
     });
   },
 
@@ -314,7 +320,7 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       redPicks: nextRedPicks,
       blueBans: nextBlueBans,
       redBans: nextRedBans,
-      selectedHero: hero,
+      selectedHero: null,
       activeSlot: nextActiveSlot,
       freePracticeTarget: nextActiveSlot,
     });
@@ -339,6 +345,7 @@ export const useDraftStore = create<DraftState>((set, get) => ({
           bluePicks: nextBluePicks,
           activeSlot: nextActive,
           freePracticeTarget: nextActive,
+          selectedHero: null,
         });
       } else {
         const nextRedPicks = [...state.redPicks];
@@ -347,6 +354,7 @@ export const useDraftStore = create<DraftState>((set, get) => ({
           redPicks: nextRedPicks,
           activeSlot: nextActive,
           freePracticeTarget: nextActive,
+          selectedHero: null,
         });
       }
     } else {
@@ -357,6 +365,7 @@ export const useDraftStore = create<DraftState>((set, get) => ({
           blueBans: nextBlueBans,
           activeSlot: nextActive,
           freePracticeTarget: nextActive,
+          selectedHero: null,
         });
       } else {
         const nextRedBans = [...state.redBans];
@@ -365,6 +374,7 @@ export const useDraftStore = create<DraftState>((set, get) => ({
           redBans: nextRedBans,
           activeSlot: nextActive,
           freePracticeTarget: nextActive,
+          selectedHero: null,
         });
       }
     }

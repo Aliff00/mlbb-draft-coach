@@ -13,18 +13,20 @@ export const App: React.FC = () => {
     setAuthLoading,
     fetchDrafts,
     setActiveSlot,
+    setInspectedHero,
   } = useDraftStore();
 
-  // Escape key deselects any active slot on the board
+  // Escape key deselects any active slot on the board or inspected hero
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setActiveSlot(null);
+        setInspectedHero(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setActiveSlot]);
+  }, [setActiveSlot, setInspectedHero]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
