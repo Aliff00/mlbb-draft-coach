@@ -28,7 +28,21 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
   const isBlue = team === 'BLUE';
 
   return (
-    <aside className="h-full w-full flex flex-col min-h-0 rounded-none overflow-hidden border border-slate-800/80 bg-slate-950/60 backdrop-blur-md shadow-2xl select-none transition-all">
+    <aside
+      className={`h-full w-full flex flex-col min-h-0 rounded-none overflow-hidden select-none transition-all shadow-2xl ${
+        isBlue
+          ? 'border-y border-l border-r-0 border-slate-800/80 bg-gradient-to-r from-slate-950/75 via-slate-950/40 to-transparent'
+          : 'border-y border-r border-l-0 border-slate-800/80 bg-gradient-to-l from-slate-950/75 via-slate-950/40 to-transparent'
+      }`}
+      style={{
+        maskImage: isBlue
+          ? 'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 72%, rgba(0,0,0,0.35) 88%, rgba(0,0,0,0) 100%)'
+          : 'linear-gradient(to left, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 72%, rgba(0,0,0,0.35) 88%, rgba(0,0,0,0) 100%)',
+        WebkitMaskImage: isBlue
+          ? 'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 72%, rgba(0,0,0,0.35) 88%, rgba(0,0,0,0) 100%)'
+          : 'linear-gradient(to left, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 72%, rgba(0,0,0,0.35) 88%, rgba(0,0,0,0) 100%)',
+      }}
+    >
       {picks.map((hero, idx) => {
         const laneCfg = DEDICATED_LANES[idx] || DEDICATED_LANES[0];
         const isActive =
@@ -71,29 +85,35 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
               }
             }}
             className={`group relative flex-1 min-h-0 w-full flex flex-col justify-end overflow-hidden cursor-pointer transition-all duration-200 ${
-              idx < picks.length - 1
-                ? 'border-b border-slate-800/80'
-                : ''
-            } ${
               hero
                 ? isBlue
-                  ? 'bg-sky-950/30 hover:bg-sky-950/45'
-                  : 'bg-rose-950/30 hover:bg-rose-950/45'
+                  ? 'bg-gradient-to-r from-sky-950/35 via-slate-950/20 to-transparent hover:from-sky-950/50 hover:to-transparent'
+                  : 'bg-gradient-to-l from-rose-950/35 via-slate-950/20 to-transparent hover:from-rose-950/50 hover:to-transparent'
                 : isActive
                 ? isBlue
-                  ? 'bg-gradient-to-r from-blue-600/40 via-blue-600/15 to-transparent'
-                  : 'bg-gradient-to-l from-red-600/40 via-red-600/15 to-transparent'
+                  ? 'bg-gradient-to-r from-blue-600/30 via-blue-600/10 to-transparent'
+                  : 'bg-gradient-to-l from-red-600/30 via-red-600/10 to-transparent'
                 : isBlue
-                ? 'bg-gradient-to-r from-blue-950/30 via-slate-950/50 to-slate-950/70 hover:from-blue-900/40 hover:to-slate-900/80'
-                : 'bg-gradient-to-l from-rose-950/30 via-slate-950/50 to-slate-950/70 hover:from-rose-900/40 hover:to-slate-900/80'
+                ? 'bg-gradient-to-r from-blue-950/30 via-slate-950/35 to-transparent hover:from-blue-900/40 hover:via-slate-900/30 hover:to-transparent'
+                : 'bg-gradient-to-l from-rose-950/30 via-slate-950/35 to-transparent hover:from-rose-900/40 hover:via-slate-900/30 hover:to-transparent'
             } ${
               isActive
                 ? isBlue
-                  ? 'ring-1 ring-inset ring-sky-400/40'
-                  : 'ring-1 ring-inset ring-rose-400/40'
+                  ? 'border-l-2 border-l-sky-400'
+                  : 'border-r-2 border-r-rose-400'
                 : ''
             } ${draggedIndex === idx ? 'opacity-50 scale-95' : ''}`}
           >
+            {/* Horizontal Slot Divider Fading to Transparent toward the inner edge */}
+            {idx < picks.length - 1 && (
+              <div
+                className={`absolute bottom-0 inset-x-0 h-px z-20 pointer-events-none ${
+                  isBlue
+                    ? 'bg-gradient-to-r from-slate-800/80 via-slate-800/40 to-transparent'
+                    : 'bg-gradient-to-l from-slate-800/80 via-slate-800/40 to-transparent'
+                }`}
+              />
+            )}
             {/* FILLED STATE: Eased Smooth 3/4 Card Hero Portrait with Center Fade */}
             {hero ? (
               <>
