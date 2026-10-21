@@ -5,6 +5,8 @@ import {
   Check,
   ChevronDown,
   FileText,
+  Maximize2,
+  Minimize2,
   RotateCcw,
   X,
 } from 'lucide-react';
@@ -39,6 +41,8 @@ export const TopBar: React.FC = () => {
     swapBanSlots,
     resetBoard,
     setMapTrait,
+    isFullscreen,
+    toggleFullscreen,
   } = useDraftStore();
 
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -183,7 +187,7 @@ export const TopBar: React.FC = () => {
         onClose={() => setIsSummaryModalOpen(false)}
       />
 
-      <header className="relative z-20 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md px-3 sm:px-4 py-2 shadow-xl">
+      <header className="relative z-20 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md px-3 sm:px-6 lg:px-8 py-2 shadow-xl">
         <div className="grid grid-cols-12 items-center gap-2">
           {/* Left: Blue Team 5 Quick Ban Chips */}
           <div className="col-span-12 sm:col-span-3 flex items-center justify-start relative">
@@ -292,12 +296,26 @@ export const TopBar: React.FC = () => {
             </button>
           </div>
 
-          {/* Right: Red Team 5 Quick Ban Chips */}
-          <div className="col-span-12 sm:col-span-3 flex items-center justify-end relative">
+          {/* Right: Red Team 5 Quick Ban Chips + Universal Top-Right Fullscreen */}
+          <div className="col-span-12 sm:col-span-3 flex items-center justify-end gap-2 sm:gap-2.5 relative">
             <div className="absolute -right-2 inset-y-0 w-28 bg-rose-600/15 blur-xl pointer-events-none rounded-full" />
             <div className="relative z-10 flex items-center gap-1.5">
               {[0, 1, 2, 3, 4].map((idx) => renderBanChip('RED', idx))}
             </div>
+
+            {/* Universal Top-Right Fullscreen Toggle */}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="relative z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/90 text-slate-300 hover:text-white hover:border-slate-500 transition cursor-pointer shadow-sm shrink-0 ml-1"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            >
+              {isFullscreen ? (
+                <Minimize2 className="h-3.5 w-3.5" />
+              ) : (
+                <Maximize2 className="h-3.5 w-3.5" />
+              )}
+            </button>
           </div>
         </div>
       </header>
