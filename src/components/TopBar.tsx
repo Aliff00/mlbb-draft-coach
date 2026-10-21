@@ -179,7 +179,15 @@ export const TopBar: React.FC = () => {
         onClose={() => setIsSummaryModalOpen(false)}
       />
 
-      <header className="relative z-20 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md px-3 sm:px-6 lg:px-8 py-2 shadow-xl">
+      <header className="relative z-20 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md px-3 sm:px-6 lg:px-8 py-2 shadow-xl overflow-hidden">
+        {/* Blue Team Left Accent Glow & Bottom Indicator Line */}
+        <div className="absolute left-0 inset-y-0 w-80 sm:w-96 bg-gradient-to-r from-blue-600/30 via-blue-950/25 to-transparent pointer-events-none" />
+        <div className="absolute left-0 bottom-0 w-64 sm:w-80 h-[2px] bg-gradient-to-r from-blue-400 via-blue-500/60 to-transparent pointer-events-none" />
+
+        {/* Red Team Right Accent Glow & Bottom Indicator Line */}
+        <div className="absolute right-0 inset-y-0 w-80 sm:w-96 bg-gradient-to-l from-rose-600/30 via-rose-950/25 to-transparent pointer-events-none" />
+        <div className="absolute right-0 bottom-0 w-64 sm:w-80 h-[2px] bg-gradient-to-l from-rose-400 via-rose-500/60 to-transparent pointer-events-none" />
+
         {/* Top-Rightmost Fullscreen Toggle: tiny, no container, pure icon */}
         <button
           type="button"
@@ -197,8 +205,10 @@ export const TopBar: React.FC = () => {
         <div className="grid grid-cols-12 items-center gap-2">
           {/* Left: Blue Team 5 Quick Ban Chips */}
           <div className="col-span-12 sm:col-span-3 flex items-center justify-start relative">
-            <div className="absolute -left-2 inset-y-0 w-28 bg-blue-600/15 blur-xl pointer-events-none rounded-full" />
-            <div className="relative z-10 flex items-center gap-1.5">
+            <div className="relative z-10 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-950/70 border border-blue-500/40 shadow-[0_0_15px_rgba(37,99,235,0.25)]">
+              <span className="text-[9.5px] font-hud font-black tracking-wider text-sky-400 uppercase select-none mr-0.5">
+                BLUE
+              </span>
               {[0, 1, 2, 3, 4].map((idx) => renderBanChip('BLUE', idx))}
             </div>
           </div>
@@ -304,9 +314,11 @@ export const TopBar: React.FC = () => {
 
           {/* Right: Red Team 5 Quick Ban Chips */}
           <div className="col-span-12 sm:col-span-3 flex items-center justify-end relative">
-            <div className="absolute -right-2 inset-y-0 w-28 bg-rose-600/15 blur-xl pointer-events-none rounded-full" />
-            <div className="relative z-10 flex items-center gap-1.5 pr-4 sm:pr-5">
+            <div className="relative z-10 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-rose-950/70 border border-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.25)] mr-4 sm:mr-5">
               {[0, 1, 2, 3, 4].map((idx) => renderBanChip('RED', idx))}
+              <span className="text-[9.5px] font-hud font-black tracking-wider text-rose-400 uppercase select-none ml-0.5">
+                RED
+              </span>
             </div>
           </div>
         </div>

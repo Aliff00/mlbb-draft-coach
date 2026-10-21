@@ -28,13 +28,7 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
   const isBlue = team === 'BLUE';
 
   return (
-    <aside
-      className={`h-full w-full flex flex-col min-h-0 rounded-none overflow-hidden backdrop-blur-md select-none transition-all ${
-        isBlue
-          ? 'border border-blue-500/30 border-l-[3px] border-l-blue-400 bg-gradient-to-r from-blue-950/40 via-slate-950/70 to-slate-950/50 shadow-[0_0_25px_rgba(37,99,235,0.2)]'
-          : 'border border-rose-500/30 border-r-[3px] border-r-rose-400 bg-gradient-to-l from-rose-950/40 via-slate-950/70 to-slate-950/50 shadow-[0_0_25px_rgba(244,63,94,0.2)]'
-      }`}
-    >
+    <aside className="h-full w-full flex flex-col min-h-0 rounded-none overflow-hidden border border-slate-800/80 bg-slate-950/60 backdrop-blur-md shadow-2xl select-none transition-all">
       {picks.map((hero, idx) => {
         const laneCfg = DEDICATED_LANES[idx] || DEDICATED_LANES[0];
         const isActive =
@@ -78,9 +72,7 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
             }}
             className={`group relative flex-1 min-h-0 w-full flex flex-col justify-end overflow-hidden cursor-pointer transition-all duration-200 ${
               idx < picks.length - 1
-                ? isBlue
-                  ? 'border-b border-blue-500/20'
-                  : 'border-b border-rose-500/20'
+                ? 'border-b border-slate-800/80'
                 : ''
             } ${
               hero
