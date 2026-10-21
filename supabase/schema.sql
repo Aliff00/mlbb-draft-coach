@@ -48,3 +48,4 @@ CREATE POLICY "Users can delete their own drafts"
 
 -- Index for speedy user draft queries
 CREATE INDEX IF NOT EXISTS idx_drafts_user_created ON public.drafts (user_id, created_at DESC);
+

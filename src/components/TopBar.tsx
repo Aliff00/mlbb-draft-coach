@@ -203,14 +203,17 @@ export const TopBar: React.FC = () => {
         onOpenSaveModal={() => setIsSaveModalOpen(true)}
       />
 
-      <header className="relative z-20 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md px-3 sm:px-6 lg:px-8 py-2 shadow-xl overflow-hidden">
-        {/* Blue Team Left Accent Glow & Bottom Indicator Line */}
-        <div className="absolute left-0 inset-y-0 w-80 sm:w-96 bg-gradient-to-r from-blue-600/30 via-blue-950/25 to-transparent pointer-events-none" />
-        <div className="absolute left-0 bottom-0 w-64 sm:w-80 h-[2px] bg-gradient-to-r from-blue-400 via-blue-500/60 to-transparent pointer-events-none" />
+      <header className="relative z-20 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md px-3 sm:px-6 lg:px-8 py-2 shadow-xl">
+        {/* Background Team Accents Container (contained without clipping dropdown menus) */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Blue Team Left Accent Glow & Bottom Indicator Line */}
+          <div className="absolute left-0 inset-y-0 w-80 sm:w-96 bg-gradient-to-r from-blue-600/30 via-blue-950/25 to-transparent" />
+          <div className="absolute left-0 bottom-0 w-64 sm:w-80 h-[2px] bg-gradient-to-r from-blue-400 via-blue-500/60 to-transparent" />
 
-        {/* Red Team Right Accent Glow & Bottom Indicator Line */}
-        <div className="absolute right-0 inset-y-0 w-80 sm:w-96 bg-gradient-to-l from-rose-600/30 via-rose-950/25 to-transparent pointer-events-none" />
-        <div className="absolute right-0 bottom-0 w-64 sm:w-80 h-[2px] bg-gradient-to-l from-rose-400 via-rose-500/60 to-transparent pointer-events-none" />
+          {/* Red Team Right Accent Glow & Bottom Indicator Line */}
+          <div className="absolute right-0 inset-y-0 w-80 sm:w-96 bg-gradient-to-l from-rose-600/30 via-rose-950/25 to-transparent" />
+          <div className="absolute right-0 bottom-0 w-64 sm:w-80 h-[2px] bg-gradient-to-l from-rose-400 via-rose-500/60 to-transparent" />
+        </div>
 
         {/* Top-Rightmost Fullscreen Toggle: tiny, no container, pure icon */}
         <button
@@ -363,7 +366,7 @@ export const TopBar: React.FC = () => {
             </button>
 
             {/* User Auth Status / Sign In Dropdown */}
-            <div className="relative">
+            <div className={`relative ${isAuthMenuOpen ? 'z-50' : ''}`}>
               {user ? (
                 <button
                   type="button"
@@ -405,7 +408,7 @@ export const TopBar: React.FC = () => {
                     className="fixed inset-0 z-40"
                     onClick={() => setIsAuthMenuOpen(false)}
                   />
-                  <div className="absolute right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 top-full mt-1.5 w-56 rounded-xl border border-slate-700 bg-slate-950/95 p-2.5 shadow-2xl backdrop-blur-md z-50 text-left font-hud">
+                  <div className="absolute right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 top-full mt-2 w-64 rounded-xl border border-slate-700 bg-slate-950/98 p-3 shadow-2xl backdrop-blur-xl z-50 text-left font-hud">
                     {user ? (
                       <div className="space-y-2">
                         <div className="border-b border-slate-800 pb-2">
