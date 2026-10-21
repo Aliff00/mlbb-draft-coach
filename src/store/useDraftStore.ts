@@ -266,25 +266,50 @@ export const useDraftStore = create<DraftState>((set, get) => ({
 
   clearSlot: (type, team, index) => {
     const state = get();
+    // Do not auto-target the cleared slot.
+    // If the cleared slot was the one selected, unselect it (null); otherwise preserve previous selection.
+    const isClearingActive =
+      state.activeSlot?.type === type &&
+      state.activeSlot?.team === team &&
+      state.activeSlot?.index === index;
+
+    const nextActive = isClearingActive ? null : state.activeSlot;
+
     if (type === 'PICK') {
       if (team === 'BLUE') {
         const nextBluePicks = [...state.bluePicks];
         nextBluePicks[index] = null;
-        set({ bluePicks: nextBluePicks, activeSlot: { type: 'PICK', team, index } });
+        set({
+          bluePicks: nextBluePicks,
+          activeSlot: nextActive,
+          freePracticeTarget: nextActive,
+        });
       } else {
         const nextRedPicks = [...state.redPicks];
         nextRedPicks[index] = null;
-        set({ redPicks: nextRedPicks, activeSlot: { type: 'PICK', team, index } });
+        set({
+          redPicks: nextRedPicks,
+          activeSlot: nextActive,
+          freePracticeTarget: nextActive,
+        });
       }
     } else {
       if (team === 'BLUE') {
         const nextBlueBans = [...state.blueBans];
         nextBlueBans[index] = null;
-        set({ blueBans: nextBlueBans, activeSlot: { type: 'BAN', team, index } });
+        set({
+          blueBans: nextBlueBans,
+          activeSlot: nextActive,
+          freePracticeTarget: nextActive,
+        });
       } else {
         const nextRedBans = [...state.redBans];
         nextRedBans[index] = null;
-        set({ redBans: nextRedBans, activeSlot: { type: 'BAN', team, index } });
+        set({
+          redBans: nextRedBans,
+          activeSlot: nextActive,
+          freePracticeTarget: nextActive,
+        });
       }
     }
   },
