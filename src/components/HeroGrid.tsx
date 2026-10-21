@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Check,
   Filter,
@@ -62,6 +62,15 @@ export const HeroGrid: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<HeroSortOrder>('RELEASE_ASC');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Smoothly reset scroll to top whenever filters change, preventing disoriented offsets
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [laneFilter, roleFilter, searchQuery]);
 
   const mapConfig = MAP_EFFECTS_CONFIG[mapTrait];
   const mapTheme = getMapEffectColorTheme(mapTrait);
@@ -306,8 +315,12 @@ export const HeroGrid: React.FC = () => {
         )}
       </div>
 
-      {/* Dense Circular Hero Avatar Grid */}
-      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+      {/* Dense Circular Hero Avatar Grid with Stable Reserved Scrollbar Gutter */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 min-h-0 overflow-y-scroll pr-1"
+        style={{ scrollbarGutter: 'stable' }}
+      >
         <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
           {filteredHeroes.map((hero) => {
             const isBanned =
