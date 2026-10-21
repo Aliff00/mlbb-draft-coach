@@ -114,8 +114,8 @@ export const HeroGrid: React.FC = () => {
             title="Search heroes strictly by name"
             className={`h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-none flex items-center justify-center border transition-all cursor-pointer shrink-0 ${
               isSearchOpen || searchQuery
-                ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-gold-glow'
-                : 'bg-slate-950/70 backdrop-blur-sm text-slate-300 border-slate-800/80 hover:border-slate-600 hover:text-slate-100'
+                ? 'bg-gradient-to-t from-white/20 via-white/5 to-transparent text-white border-slate-700 shadow-[inset_0_-2px_0_rgba(255,255,255,0.75)]'
+                : 'bg-slate-950/70 backdrop-blur-sm text-slate-400 border-slate-800/80 hover:bg-white/[0.04] hover:text-slate-200'
             }`}
           >
             <Search className="h-3.5 w-3.5" />
@@ -154,8 +154,8 @@ export const HeroGrid: React.FC = () => {
               title="Filter & sort heroes"
               className={`h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-none flex items-center justify-center border transition-all cursor-pointer ${
                 isFilterOpen || sortOrder !== 'RELEASE_ASC' || roleFilter !== 'ALL'
-                  ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-gold-glow'
-                  : 'bg-slate-950/70 backdrop-blur-sm text-slate-300 border-slate-800/80 hover:border-slate-600 hover:text-slate-100'
+                  ? 'bg-gradient-to-t from-white/20 via-white/5 to-transparent text-white border-slate-700 shadow-[inset_0_-2px_0_rgba(255,255,255,0.75)]'
+                  : 'bg-slate-950/70 backdrop-blur-sm text-slate-400 border-slate-800/80 hover:bg-white/[0.04] hover:text-slate-200'
               }`}
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -167,10 +167,10 @@ export const HeroGrid: React.FC = () => {
                   className="fixed inset-0 z-40"
                   onClick={() => setIsFilterOpen(false)}
                 />
-                <div className="absolute right-0 top-full mt-1.5 w-56 rounded-xl border border-slate-700 bg-slate-950/95 p-3 shadow-2xl backdrop-blur-md z-50 text-left">
+                <div className="absolute right-0 top-full mt-1.5 w-56 rounded-none border border-slate-700/80 bg-slate-950/95 p-3 shadow-2xl backdrop-blur-md z-50 text-left">
                   <div className="text-[10px] font-hud font-bold uppercase tracking-wider text-slate-400 pb-1.5 border-b border-slate-800 flex items-center justify-between">
                     <span>Order / Sorting</span>
-                    <span className="text-[9px] text-amber-400 font-hud">
+                    <span className="text-[9px] text-white font-hud">
                       {sortOrder === 'RELEASE_ASC' ? 'Default' : 'Active'}
                     </span>
                   </div>
@@ -182,14 +182,14 @@ export const HeroGrid: React.FC = () => {
                         setSortOrder('RELEASE_ASC');
                         setIsFilterOpen(false);
                       }}
-                      className={`flex items-center justify-between px-2 py-1.5 rounded-md text-xs font-bold transition text-left cursor-pointer ${
+                      className={`flex items-center justify-between px-2 py-1.5 rounded-none text-xs font-bold transition text-left cursor-pointer ${
                         sortOrder === 'RELEASE_ASC'
-                          ? 'bg-amber-500 text-slate-950'
-                          : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                          ? 'bg-gradient-to-t from-white/20 via-white/5 to-transparent text-white font-black shadow-[inset_0_-2px_0_rgba(255,255,255,0.75)] border-b border-white/30'
+                          : 'text-slate-300 hover:bg-white/[0.04] hover:text-white'
                       }`}
                     >
                       <span>Release Date (Ascending)</span>
-                      {sortOrder === 'RELEASE_ASC' && <Check className="h-3 w-3 stroke-[3]" />}
+                      {sortOrder === 'RELEASE_ASC' && <Check className="h-3 w-3 text-white stroke-[3]" />}
                     </button>
 
                     <button
@@ -198,14 +198,14 @@ export const HeroGrid: React.FC = () => {
                         setSortOrder('RELEASE_DESC');
                         setIsFilterOpen(false);
                       }}
-                      className={`flex items-center justify-between px-2 py-1.5 rounded-md text-xs font-bold transition text-left cursor-pointer ${
+                      className={`flex items-center justify-between px-2 py-1.5 rounded-none text-xs font-bold transition text-left cursor-pointer ${
                         sortOrder === 'RELEASE_DESC'
-                          ? 'bg-amber-500 text-slate-950'
-                          : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                          ? 'bg-gradient-to-t from-white/20 via-white/5 to-transparent text-white font-black shadow-[inset_0_-2px_0_rgba(255,255,255,0.75)] border-b border-white/30'
+                          : 'text-slate-300 hover:bg-white/[0.04] hover:text-white'
                       }`}
                     >
                       <span>Release Date (Descending)</span>
-                      {sortOrder === 'RELEASE_DESC' && <Check className="h-3 w-3 stroke-[3]" />}
+                      {sortOrder === 'RELEASE_DESC' && <Check className="h-3 w-3 text-white stroke-[3]" />}
                     </button>
 
                     <button
@@ -214,14 +214,14 @@ export const HeroGrid: React.FC = () => {
                         setSortOrder('NAME_ASC');
                         setIsFilterOpen(false);
                       }}
-                      className={`flex items-center justify-between px-2 py-1.5 rounded-md text-xs font-bold transition text-left cursor-pointer ${
+                      className={`flex items-center justify-between px-2 py-1.5 rounded-none text-xs font-bold transition text-left cursor-pointer ${
                         sortOrder === 'NAME_ASC'
-                          ? 'bg-amber-500 text-slate-950'
-                          : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                          ? 'bg-gradient-to-t from-white/20 via-white/5 to-transparent text-white font-black shadow-[inset_0_-2px_0_rgba(255,255,255,0.75)] border-b border-white/30'
+                          : 'text-slate-300 hover:bg-white/[0.04] hover:text-white'
                       }`}
                     >
                       <span>Hero Name (A → Z)</span>
-                      {sortOrder === 'NAME_ASC' && <Check className="h-3 w-3 stroke-[3]" />}
+                      {sortOrder === 'NAME_ASC' && <Check className="h-3 w-3 text-white stroke-[3]" />}
                     </button>
 
                     <button
@@ -230,14 +230,14 @@ export const HeroGrid: React.FC = () => {
                         setSortOrder('NAME_DESC');
                         setIsFilterOpen(false);
                       }}
-                      className={`flex items-center justify-between px-2 py-1.5 rounded-md text-xs font-bold transition text-left cursor-pointer ${
+                      className={`flex items-center justify-between px-2 py-1.5 rounded-none text-xs font-bold transition text-left cursor-pointer ${
                         sortOrder === 'NAME_DESC'
-                          ? 'bg-amber-500 text-slate-950'
-                          : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                          ? 'bg-gradient-to-t from-white/20 via-white/5 to-transparent text-white font-black shadow-[inset_0_-2px_0_rgba(255,255,255,0.75)] border-b border-white/30'
+                          : 'text-slate-300 hover:bg-white/[0.04] hover:text-white'
                       }`}
                     >
                       <span>Hero Name (Z → A)</span>
-                      {sortOrder === 'NAME_DESC' && <Check className="h-3 w-3 stroke-[3]" />}
+                      {sortOrder === 'NAME_DESC' && <Check className="h-3 w-3 text-white stroke-[3]" />}
                     </button>
                   </div>
 
@@ -252,10 +252,10 @@ export const HeroGrid: React.FC = () => {
                           key={r}
                           type="button"
                           onClick={() => setRoleFilter(r as any)}
-                          className={`px-1.5 py-1 rounded text-center font-bold uppercase transition cursor-pointer ${
+                          className={`px-1.5 py-1 rounded-none text-center font-bold uppercase transition cursor-pointer ${
                             roleFilter === r
-                              ? 'bg-sky-500 text-slate-950'
-                              : 'bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
+                              ? 'bg-gradient-to-t from-white/20 via-white/5 to-transparent text-white font-black shadow-[inset_0_-2px_0_rgba(255,255,255,0.75)] border border-white/30'
+                              : 'bg-slate-900 text-slate-400 hover:bg-white/[0.04] hover:text-white border border-slate-800'
                           }`}
                         >
                           {r}
@@ -273,20 +273,20 @@ export const HeroGrid: React.FC = () => {
         {(isSearchOpen || searchQuery) && (
           <div className="relative w-full pt-0.5 flex items-center gap-1.5">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-amber-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/70" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search hero strictly by name..."
                 autoFocus
-                className="w-full rounded-md border border-amber-500/50 bg-slate-950/90 pl-8 pr-7 py-1 text-xs text-white placeholder-slate-400 focus:border-amber-400 focus:outline-none font-body shadow-inner"
+                className="w-full rounded-none border border-slate-700/80 bg-slate-950/90 pl-8 pr-7 py-1 text-xs text-white placeholder-slate-400 focus:border-white/60 focus:bg-white/[0.03] focus:outline-none font-body shadow-inner"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -298,7 +298,7 @@ export const HeroGrid: React.FC = () => {
                 setIsSearchOpen(false);
                 setSearchQuery('');
               }}
-              className="text-[10px] font-hud font-bold uppercase tracking-wider text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 cursor-pointer"
+              className="text-[10px] font-hud font-bold uppercase tracking-wider text-slate-400 hover:text-white px-2 py-1 rounded-none bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-white/[0.04] cursor-pointer"
             >
               Close
             </button>
