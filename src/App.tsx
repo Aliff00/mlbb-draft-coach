@@ -7,7 +7,18 @@ import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { useDraftStore } from './store/useDraftStore';
 
 export const App: React.FC = () => {
-  const { setIsFullscreen, setUser, setAuthLoading, fetchDrafts, setActiveSlot } = useDraftStore();
+  const {
+    setIsFullscreen,
+    setUser,
+    setAuthLoading,
+    fetchDrafts,
+    setActiveSlot,
+    userTeamSide,
+    setUserTeamSide,
+  } = useDraftStore();
+
+  const isBlueUser = userTeamSide === 'blue';
+  const isRedUser = userTeamSide === 'red';
 
   // Escape key deselects any active slot on the board
   useEffect(() => {
@@ -88,8 +99,25 @@ export const App: React.FC = () => {
         <div className="col-span-3 h-full min-h-0 flex items-start justify-start relative">
           {/* Blue Team Ambient Glow Accent */}
           <div className="absolute -left-12 inset-y-6 w-56 bg-blue-600/15 blur-3xl pointer-events-none rounded-full" />
-          <div className="w-[84%] max-w-[220px] h-full min-h-0 flex flex-col relative z-10 ml-1 sm:ml-2">
-            <TeamColumn team="BLUE" />
+          <div className="w-[84%] max-w-[220px] h-full min-h-0 flex flex-col relative z-10 ml-1 sm:ml-2 gap-1.5">
+            {/* Perspective Badge */}
+            <div className="flex items-center justify-center shrink-0">
+              <button
+                type="button"
+                onClick={() => setUserTeamSide('blue')}
+                className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] sm:text-[11px] font-hud font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  isBlueUser
+                    ? 'bg-blue-950/90 border border-blue-400/60 text-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.35)] ring-1 ring-blue-400/30'
+                    : 'bg-slate-950/70 border border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+                title={isBlueUser ? 'Your drafted team' : 'Click to make Blue your team'}
+              >
+                <span>{isBlueUser ? '🛡️ YOUR TEAM' : '⚔️ OPPONENT'}</span>
+              </button>
+            </div>
+            <div className="flex-1 min-h-0">
+              <TeamColumn team="BLUE" />
+            </div>
           </div>
         </div>
 
@@ -102,8 +130,25 @@ export const App: React.FC = () => {
         <div className="col-span-3 h-full min-h-0 flex items-start justify-end relative">
           {/* Red Team Ambient Glow Accent */}
           <div className="absolute -right-12 inset-y-6 w-56 bg-rose-600/15 blur-3xl pointer-events-none rounded-full" />
-          <div className="w-[84%] max-w-[220px] h-full min-h-0 flex flex-col relative z-10 mr-1 sm:mr-2">
-            <TeamColumn team="RED" />
+          <div className="w-[84%] max-w-[220px] h-full min-h-0 flex flex-col relative z-10 mr-1 sm:mr-2 gap-1.5">
+            {/* Perspective Badge */}
+            <div className="flex items-center justify-center shrink-0">
+              <button
+                type="button"
+                onClick={() => setUserTeamSide('red')}
+                className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] sm:text-[11px] font-hud font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  isRedUser
+                    ? 'bg-rose-950/90 border border-rose-400/60 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.35)] ring-1 ring-rose-400/30'
+                    : 'bg-slate-950/70 border border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+                title={isRedUser ? 'Your drafted team' : 'Click to make Red your team'}
+              >
+                <span>{isRedUser ? '🛡️ YOUR TEAM' : '⚔️ OPPONENT'}</span>
+              </button>
+            </div>
+            <div className="flex-1 min-h-0">
+              <TeamColumn team="RED" />
+            </div>
           </div>
         </div>
       </main>

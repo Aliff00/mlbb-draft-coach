@@ -41,6 +41,8 @@ interface DraftState {
   selectedMapEffect: MapEffectType;
   blueTeamName: string;
   redTeamName: string;
+  userTeamSide: 'blue' | 'red';
+  setUserTeamSide: (side: 'blue' | 'red') => void;
 
   // Board Slots (Fixed 5 Lanes & 5 Quick Bans)
   bluePicks: (Hero | null)[];
@@ -192,6 +194,8 @@ export const useDraftStore = create<DraftState>((set, get) => ({
   selectedMapEffect: 'standard',
   blueTeamName: 'Blue Team',
   redTeamName: 'Red Team',
+  userTeamSide: 'blue',
+  setUserTeamSide: (userTeamSide) => set({ userTeamSide }),
 
   bluePicks: createEmptySlots(5),
   redPicks: createEmptySlots(5),
@@ -455,13 +459,9 @@ export const useDraftStore = create<DraftState>((set, get) => ({
 
   swapSides: () => {
     const state = get();
+    const nextSide = state.userTeamSide === 'blue' ? 'red' : 'blue';
     set({
-      bluePicks: [...state.redPicks],
-      redPicks: [...state.bluePicks],
-      blueBans: [...state.redBans],
-      redBans: [...state.blueBans],
-      blueTeamName: state.redTeamName,
-      redTeamName: state.blueTeamName,
+      userTeamSide: nextSide,
       activeSlot: state.activeSlot
         ? {
             ...state.activeSlot,
@@ -473,6 +473,7 @@ export const useDraftStore = create<DraftState>((set, get) => ({
 
   resetBoard: () => {
     set({
+      userTeamSide: 'blue',
       bluePicks: createEmptySlots(5),
       redPicks: createEmptySlots(5),
       blueBans: createEmptySlots(5),

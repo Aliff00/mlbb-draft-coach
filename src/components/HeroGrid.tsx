@@ -45,6 +45,7 @@ const LANE_TABS: Array<{
 export const HeroGrid: React.FC = () => {
   const {
     activeSlot,
+    userTeamSide,
     mapTrait,
     blueBans,
     redBans,
@@ -126,24 +127,19 @@ export const HeroGrid: React.FC = () => {
     return set;
   }, [bluePicks, redPicks, blueBans, redBans]);
 
-  // Compute top recommended counter & synergy hero IDs for the active lane
+  // Compute top recommended counter & synergy hero IDs for YOUR TEAM's active/empty lane
   const { topCounterHeroIds, topSynergyHeroIds } = useMemo(() => {
-    const isPickSlot = activeSlot?.type === 'PICK';
-    const activeTeam = activeSlot?.team || 'BLUE';
-    const activeIndex = activeSlot?.index ?? -1;
+    const userTeamEnum = userTeamSide === 'blue' ? 'BLUE' : 'RED';
+    const userPicks = userTeamSide === 'blue' ? bluePicks : redPicks;
+    const opponentPicks = userTeamSide === 'blue' ? redPicks : bluePicks;
 
-    const laneConfig =
-      isPickSlot && activeIndex >= 0 && activeIndex < DEDICATED_LANES.length
-        ? DEDICATED_LANES[activeIndex]
-        : null;
-    const targetLane = laneConfig?.lane;
+    const isUserPickSlot = activeSlot?.type === 'PICK' && activeSlot?.team === userTeamEnum;
+    const targetLane = isUserPickSlot
+      ? DEDICATED_LANES[activeSlot.index]?.lane
+      : DEDICATED_LANES[userPicks.findIndex((p) => p === null)]?.lane;
 
-    const enemyPicks = (activeTeam === 'BLUE' ? redPicks : bluePicks).filter(
-      Boolean
-    ) as Hero[];
-    const allyPicks = (activeTeam === 'BLUE' ? bluePicks : redPicks).filter(
-      Boolean
-    ) as Hero[];
+    const enemyPicks = opponentPicks.filter(Boolean) as Hero[];
+    const allyPicks = userPicks.filter(Boolean) as Hero[];
 
     const counterScored: { id: string | number; score: number }[] = [];
     const synergyScored: { id: string | number; score: number }[] = [];
