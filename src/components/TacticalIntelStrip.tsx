@@ -2,11 +2,8 @@ import React, { useMemo } from 'react';
 import {
   AlertTriangle,
   BarChart2,
-  Shield,
-  Sparkles,
   Target,
   X,
-  Zap,
 } from 'lucide-react';
 import { ALL_HEROES, useDraftStore } from '../store/useDraftStore';
 import {
@@ -483,9 +480,8 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
           <div className="flex items-center justify-between w-full gap-4 pt-1 border-t border-slate-800/50 flex-wrap sm:flex-nowrap">
             {/* 1. BEST COUNTERS */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="flex-shrink-0 inline-flex items-center gap-1 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-emerald-400 uppercase">
-                <Zap className="h-3 w-3 fill-emerald-400/30 text-emerald-400 flex-shrink-0" />
-                <span>BEST COUNTERS:</span>
+              <span className="flex-shrink-0 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-emerald-400 uppercase">
+                BEST COUNTERS:
               </span>
 
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -518,9 +514,8 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
             {/* 2. MOST COUNTERED BY */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="flex-shrink-0 inline-flex items-center gap-1 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-rose-400 uppercase">
-                <Shield className="h-3 w-3 text-rose-400 flex-shrink-0" />
-                <span>COUNTERED BY:</span>
+              <span className="flex-shrink-0 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-rose-400 uppercase">
+                COUNTERED BY:
               </span>
 
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -553,9 +548,8 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
             {/* 3. MOST COMPATIBLE */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="flex-shrink-0 inline-flex items-center gap-1 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-cyan-400 uppercase">
-                <Sparkles className="h-3 w-3 text-cyan-400 flex-shrink-0" />
-                <span>COMPATIBLE:</span>
+              <span className="flex-shrink-0 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-cyan-400 uppercase">
+                COMPATIBLE:
               </span>
 
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -589,9 +583,8 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
             {/* 4. LEAST COMPATIBLE */}
             {((inspectedMeta as any)?.least_compatible && (inspectedMeta as any).least_compatible.length > 0) && (
               <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="flex-shrink-0 inline-flex items-center gap-1 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-amber-400 uppercase">
-                  <AlertTriangle className="h-3 w-3 text-amber-400 flex-shrink-0" />
-                  <span>LEAST COMPATIBLE:</span>
+                <span className="flex-shrink-0 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-amber-400 uppercase">
+                  LEAST COMPATIBLE:
                 </span>
 
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -695,11 +688,10 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
           {/* Bottom Sub-Row: Best Counters (Left) & Compatible (Right) */}
           <div className="flex items-center justify-between w-full gap-4 pt-1 border-t border-slate-800/50 flex-wrap sm:flex-nowrap">
-            {/* Left Sub-Group: ⚡ Targeted Best Counters */}
+            {/* Left Sub-Group: BEST COUNTERS */}
             <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
-              <span className="flex-shrink-0 inline-flex items-center gap-1 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-emerald-400 uppercase">
-                <Zap className="h-3 w-3 fill-emerald-400/30 text-emerald-400 flex-shrink-0" />
-                <span>BEST COUNTERS:</span>
+              <span className="flex-shrink-0 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-emerald-400 uppercase">
+                BEST COUNTERS:
               </span>
 
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -740,11 +732,10 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
               </div>
             </div>
 
-            {/* Right Sub-Group: 🤝 Targeted Team Compatibility */}
+            {/* Right Sub-Group: COMPATIBLE */}
             <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
-              <span className="flex-shrink-0 inline-flex items-center gap-1 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-cyan-400 uppercase">
-                <Sparkles className="h-3 w-3 text-cyan-400 flex-shrink-0" />
-                <span>COMPATIBLE:</span>
+              <span className="flex-shrink-0 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-cyan-400 uppercase">
+                COMPATIBLE:
               </span>
 
               <div className="flex items-center gap-2 flex-shrink-0">
