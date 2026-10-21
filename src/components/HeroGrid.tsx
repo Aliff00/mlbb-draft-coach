@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Ban,
   Check,
   Info,
   Maximize2,
@@ -321,7 +320,6 @@ export const HeroGrid: React.FC = () => {
 
             const isSelected = selectedHero?.id === hero.id;
             const disabled = isBanned || isPicked;
-            const reason = isBanned ? 'BANNED' : isPicked ? 'PICKED' : undefined;
 
             return (
               <button
@@ -337,9 +335,7 @@ export const HeroGrid: React.FC = () => {
                     isSelected
                       ? 'border-amber-400 ring-2 ring-amber-300 shadow-gold-glow scale-105 z-10'
                       : disabled
-                      ? reason === 'PICKED'
-                        ? 'border-slate-900/60 opacity-30 brightness-75 cursor-not-allowed'
-                        : 'border-slate-800/60 opacity-40 cursor-not-allowed'
+                      ? 'border-slate-900/60 opacity-30 brightness-75 cursor-not-allowed'
                       : 'border-slate-700/70 bg-slate-900/60 hover:border-amber-400/80 hover:scale-105 hover:shadow-[0_0_12px_rgba(234,179,8,0.35)]'
                   }`}
                 >
@@ -350,18 +346,9 @@ export const HeroGrid: React.FC = () => {
                     className={disabled ? '' : 'group-hover:scale-110 transition-transform duration-200'}
                   />
 
-                  {/* Disabled Status Overlay */}
-                  {disabled && reason && (
-                    reason === 'PICKED' ? (
-                      <div className="absolute inset-0 rounded-full bg-black/65 backdrop-blur-[0.5px] pointer-events-none" />
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center rounded-full bg-slate-950/80 backdrop-blur-[1px]">
-                        <Ban className="h-4 w-4 text-rose-500 mb-0.5" />
-                        <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-wider text-rose-400">
-                          Banned
-                        </span>
-                      </div>
-                    )
+                  {/* Disabled Status Overlay (Identical subtle darkened mask for both picked and banned) */}
+                  {disabled && (
+                    <div className="absolute inset-0 rounded-full bg-black/65 backdrop-blur-[0.5px] pointer-events-none" />
                   )}
                 </div>
 
@@ -371,8 +358,6 @@ export const HeroGrid: React.FC = () => {
                     className={`truncate text-[9px] sm:text-[9.5px] font-semibold tracking-normal transition-colors ${
                       isSelected
                         ? 'text-amber-300 font-bold drop-shadow-[0_0_8px_rgba(234,179,8,0.7)]'
-                        : reason === 'PICKED'
-                        ? 'text-[#8ea5c8]'
                         : disabled
                         ? 'text-slate-500/70'
                         : 'text-[#8ea5c8] group-hover:text-sky-200'
