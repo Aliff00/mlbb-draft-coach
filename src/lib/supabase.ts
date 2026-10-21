@@ -2,7 +2,10 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Hero } from '../types/draft';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  '';
 
 // Detect whether valid credentials are provided
 export const isSupabaseConfigured = Boolean(
