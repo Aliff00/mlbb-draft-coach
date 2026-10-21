@@ -145,7 +145,13 @@ export const TopBar: React.FC = () => {
             return;
           }
         }}
-        onClick={() => setActiveSlot({ type: 'BAN', team, index: slotIdx })}
+        onClick={() => {
+          if (isActive) {
+            setActiveSlot(null);
+          } else {
+            setActiveSlot({ type: 'BAN', team, index: slotIdx });
+          }
+        }}
         className="group relative h-10 w-10 sm:h-11 sm:w-11 lg:h-12 lg:w-12 flex items-center justify-center cursor-pointer select-none"
         title={
           hero

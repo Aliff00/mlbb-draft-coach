@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { ALL_HEROES, useDraftStore } from '../store/useDraftStore';
 import {
-  ActiveBoardSlot,
   DEDICATED_LANES,
   getHeroDamageType,
   Hero,
@@ -77,43 +76,48 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     [opponentPicks]
   );
 
-  // Determine active slot target on YOUR TEAM
+  // Determine active slot target on the board
   const activeSlotTarget = useMemo(() => {
-    // 1. If user explicitly clicked a PICK slot on YOUR TEAM
-    if (activeSlot?.type === 'PICK' && activeSlot?.team === userTeamEnum) {
+    // 1. If user explicitly clicked a slot
+    if (activeSlot?.type === 'PICK') {
       const laneConfig = DEDICATED_LANES[activeSlot.index] || DEDICATED_LANES[0];
+      const isYourTeam = activeSlot.team === userTeamEnum;
       return {
+        hasActiveSlot: true,
         slotIndex: activeSlot.index,
-        team: userTeamEnum,
+        team: activeSlot.team,
         laneConfig,
         targetLane: laneConfig.lane,
-        label: `YOUR ${laneConfig.shortLabel} PICK`,
+        label: isYourTeam
+          ? `YOUR ${laneConfig.shortLabel} PICK`
+          : `${activeSlot.team} ${laneConfig.shortLabel} PICK`,
       };
     }
 
-    // 2. Default: Find the first empty slot on YOUR TEAM
-    const firstEmptyIdx = userPicks.findIndex((p) => p === null);
-    if (firstEmptyIdx !== -1) {
-      const laneConfig = DEDICATED_LANES[firstEmptyIdx];
+    if (activeSlot?.type === 'BAN') {
+      const isYourTeam = activeSlot.team === userTeamEnum;
       return {
-        slotIndex: firstEmptyIdx,
-        team: userTeamEnum,
-        laneConfig,
-        targetLane: laneConfig.lane,
-        label: `YOUR ${laneConfig.shortLabel} PICK`,
+        hasActiveSlot: true,
+        slotIndex: activeSlot.index,
+        team: activeSlot.team,
+        laneConfig: null,
+        targetLane: null,
+        label: isYourTeam
+          ? `YOUR BAN #${activeSlot.index + 1}`
+          : `${activeSlot.team} BAN #${activeSlot.index + 1}`,
       };
     }
 
-    // 3. Fallback: If YOUR TEAM is completely filled, target last slot
-    const lastLaneConfig = DEDICATED_LANES[4];
+    // 2. No slot is selected on the board (user unselected or deselected)
     return {
-      slotIndex: 4,
-      team: userTeamEnum,
-      laneConfig: lastLaneConfig,
-      targetLane: lastLaneConfig.lane,
-      label: 'YOUR TEAM (FULL)',
+      hasActiveSlot: false,
+      slotIndex: -1,
+      team: null,
+      laneConfig: null,
+      targetLane: null,
+      label: 'NO SLOT SELECTED',
     };
-  }, [activeSlot, userTeamEnum, userPicks]);
+  }, [activeSlot, userTeamEnum]);
 
   // Fast ID / slug lookup maps for heroes & meta telemetry
   const { metaById, heroById } = useMemo(() => {
@@ -128,6 +132,11 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
   // Compute Dynamic Recommendations from mlbb-meta.json
   const { topCounters, topSynergies } = useMemo(() => {
+    // When no slot is selected, do not compute or show recommendations
+    if (!activeSlotTarget.hasActiveSlot) {
+      return { topCounters: [], topSynergies: [] };
+    }
+
     const targetLane = activeSlotTarget.targetLane;
 
     // -------------------------------------------------------------
@@ -379,30 +388,11 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
   // Click-to-Draft Flow: Immediately place suggested hero into active lane slot
   const handleHeroChipClick = (hero: Hero) => {
-    const target: ActiveBoardSlot =
-      activeSlot?.type === 'PICK' && activeSlot?.team === userTeamEnum
-        ? activeSlot
-        : {
-            type: 'PICK',
-            team: userTeamEnum,
-            index: activeSlotTarget.slotIndex >= 0 ? activeSlotTarget.slotIndex : 0,
-          };
+    if (!activeSlot || activeSlot.type !== 'PICK') return;
 
-    placeHero(hero, target);
-
-    // Auto-advance activeSlot to the next unfilled slot on YOUR TEAM
-    const nextUserPicks = [...userPicks];
-    nextUserPicks[target.index] = hero;
-    const nextEmptyIdx = nextUserPicks.findIndex((p) => p === null);
-    if (nextEmptyIdx !== -1) {
-      setActiveSlot({
-        type: 'PICK',
-        team: userTeamEnum,
-        index: nextEmptyIdx,
-      });
-    } else {
-      setActiveSlot(null);
-    }
+    placeHero(hero, activeSlot);
+    // Deselect slot after placing so it doesn't auto-jump to another pick
+    setActiveSlot(null);
   };
 
   return (
@@ -526,12 +516,14 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
             {/* Left: Slot Target Indicator Badge */}
             <div
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-hud font-bold uppercase tracking-wider shadow-sm border ${
-                userTeamEnum === 'BLUE'
+                !activeSlotTarget.hasActiveSlot
+                  ? 'bg-slate-900/80 border-slate-700/80 text-slate-400'
+                  : activeSlotTarget.team === 'BLUE'
                   ? 'bg-blue-950/80 border-blue-500/60 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.25)]'
                   : 'bg-rose-950/80 border-rose-500/60 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.25)]'
               }`}
             >
-              <Target className="h-3 w-3 flex-shrink-0" />
+              <Target className={`h-3 w-3 flex-shrink-0 ${!activeSlotTarget.hasActiveSlot ? 'text-slate-500' : ''}`} />
               <span>{activeSlotTarget.label}</span>
             </div>
 
@@ -580,7 +572,9 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                 ))}
                 {topCounters.length === 0 && (
                   <span className="text-slate-500 text-[10px] italic">
-                    Awaiting enemy picks
+                    {!activeSlotTarget.hasActiveSlot
+                      ? 'Select a slot to view counters'
+                      : 'Awaiting enemy picks'}
                   </span>
                 )}
               </div>
@@ -611,7 +605,9 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                 ))}
                 {topSynergies.length === 0 && (
                   <span className="text-slate-500 text-[10px] italic">
-                    Awaiting ally picks
+                    {!activeSlotTarget.hasActiveSlot
+                      ? 'Select a slot to view synergies'
+                      : 'Awaiting ally picks'}
                   </span>
                 )}
               </div>

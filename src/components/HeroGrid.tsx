@@ -133,9 +133,7 @@ export const HeroGrid: React.FC = () => {
     const opponentPicks = userTeamSide === 'blue' ? redPicks : bluePicks;
 
     const isUserPickSlot = activeSlot?.type === 'PICK' && activeSlot?.team === userTeamEnum;
-    const targetLane = isUserPickSlot
-      ? DEDICATED_LANES[activeSlot.index]?.lane
-      : DEDICATED_LANES[userPicks.findIndex((p) => p === null)]?.lane;
+    const targetLane = isUserPickSlot ? DEDICATED_LANES[activeSlot.index]?.lane : null;
 
     const enemyPicks = opponentPicks.filter(Boolean) as Hero[];
     const allyPicks = userPicks.filter(Boolean) as Hero[];

@@ -119,7 +119,11 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
               }
             }}
             onClick={() => {
-              setActiveSlot({ type: 'PICK', team, index: idx });
+              if (isActive) {
+                setActiveSlot(null);
+              } else {
+                setActiveSlot({ type: 'PICK', team, index: idx });
+              }
             }}
             className={`group relative flex-1 min-h-0 w-full flex flex-col justify-end overflow-hidden cursor-pointer transition-all duration-200 ${
               idx < picks.length - 1
