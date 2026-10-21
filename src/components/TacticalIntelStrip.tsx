@@ -135,30 +135,31 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     // -------------------------------------------------------------
     const counterCandidates: RecommendedChip[] = [];
 
-    metaHeroes.forEach((candidateMeta) => {
-      if (
-        unavailableHeroIds.has(candidateMeta.id) ||
-        (candidateMeta.slug && unavailableHeroIds.has(candidateMeta.slug))
-      ) {
-        return;
-      }
+    // When no enemy hero is picked, do not show counter recommendations
+    if (opponentLocked.length > 0) {
+      metaHeroes.forEach((candidateMeta) => {
+        if (
+          unavailableHeroIds.has(candidateMeta.id) ||
+          (candidateMeta.slug && unavailableHeroIds.has(candidateMeta.slug))
+        ) {
+          return;
+        }
 
-      const fullHero = heroById.get(candidateMeta.id);
-      if (!fullHero) return;
+        const fullHero = heroById.get(candidateMeta.id);
+        if (!fullHero) return;
 
-      const matchesLane =
-        !targetLane ||
-        (candidateMeta.lanes &&
-          candidateMeta.lanes.some(
-            (l) => l.toUpperCase() === targetLane.toUpperCase()
-          ));
+        const matchesLane =
+          !targetLane ||
+          (candidateMeta.lanes &&
+            candidateMeta.lanes.some(
+              (l) => l.toUpperCase() === targetLane.toUpperCase()
+            ));
 
-      let counterScore = 0;
-      let primaryTooltip = '';
-      let bestEffectiveWr = 0;
-      let matchedEnemyName = '';
+        let counterScore = 0;
+        let primaryTooltip = '';
+        let bestEffectiveWr = 0;
+        let matchedEnemyName = '';
 
-      if (opponentLocked.length > 0) {
         opponentLocked.forEach((enemy) => {
           const enemyId = Number(enemy.id);
           const enemyMeta = metaById.get(enemyId);
@@ -173,7 +174,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
           );
 
           const delta = matchInCandidate?.counter_score ?? matchInEnemy?.counter_score;
-          if (delta) {
+          if (delta && delta > 0) {
             counterScore += delta;
             const estWr = Math.round(candidateMeta.win_rate + delta);
             if (estWr > bestEffectiveWr) {
@@ -183,38 +184,28 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
             }
           }
         });
-      }
 
-      // Bonus for fitting the targeted lane
-      if (matchesLane) {
-        counterScore += 25;
-      }
+        // Only recommend if this hero ACTUALLY counters at least one locked enemy pick
+        if (counterScore > 0) {
+          let totalScore = counterScore * 3;
+          if (matchesLane) totalScore += 25;
+          if (
+            mapConfig.synergyHeroIds.includes(String(candidateMeta.id)) ||
+            (candidateMeta.slug && mapConfig.synergyHeroIds.includes(candidateMeta.slug))
+          ) {
+            totalScore += 5;
+          }
+          totalScore += (candidateMeta.win_rate || 50) / 10;
 
-      // Bonus for Map Trait synergy
-      if (
-        mapConfig.synergyHeroIds.includes(String(candidateMeta.id)) ||
-        (candidateMeta.slug && mapConfig.synergyHeroIds.includes(candidateMeta.slug))
-      ) {
-        counterScore += 5;
-      }
-
-      // Baseline rank win rate weight
-      counterScore += (candidateMeta.win_rate || 50) / 10;
-
-      // Include if it matches the lane or counters an enemy
-      if (counterScore > 0 && (matchesLane || bestEffectiveWr > 0)) {
-        counterCandidates.push({
-          hero: fullHero,
-          score: counterScore,
-          targetHeroName: matchedEnemyName,
-          tooltip:
-            primaryTooltip ||
-            (targetLane
-              ? `Meta ${targetLane} (${candidateMeta.win_rate}% WR)`
-              : `High-Tier Meta (${candidateMeta.win_rate}% WR)`),
-        });
-      }
-    });
+          counterCandidates.push({
+            hero: fullHero,
+            score: totalScore,
+            targetHeroName: matchedEnemyName,
+            tooltip: primaryTooltip || `Direct Counter (${Math.round(candidateMeta.win_rate)}% WR)`,
+          });
+        }
+      });
+    }
 
     // Prioritize lane matches first, then counter score
     counterCandidates.sort((a, b) => b.score - a.score);
@@ -226,31 +217,32 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     const synergyCandidates: RecommendedChip[] = [];
     const usedCounterIds = new Set(counters.map((c) => String(c.hero.id)));
 
-    metaHeroes.forEach((candidateMeta) => {
-      if (
-        unavailableHeroIds.has(candidateMeta.id) ||
-        (candidateMeta.slug && unavailableHeroIds.has(candidateMeta.slug)) ||
-        usedCounterIds.has(String(candidateMeta.id))
-      ) {
-        return;
-      }
+    // When no ally hero is picked, do not show synergy recommendations
+    if (userLocked.length > 0) {
+      metaHeroes.forEach((candidateMeta) => {
+        if (
+          unavailableHeroIds.has(candidateMeta.id) ||
+          (candidateMeta.slug && unavailableHeroIds.has(candidateMeta.slug)) ||
+          usedCounterIds.has(String(candidateMeta.id))
+        ) {
+          return;
+        }
 
-      const fullHero = heroById.get(candidateMeta.id);
-      if (!fullHero) return;
+        const fullHero = heroById.get(candidateMeta.id);
+        if (!fullHero) return;
 
-      const matchesLane =
-        !targetLane ||
-        (candidateMeta.lanes &&
-          candidateMeta.lanes.some(
-            (l) => l.toUpperCase() === targetLane.toUpperCase()
-          ));
+        const matchesLane =
+          !targetLane ||
+          (candidateMeta.lanes &&
+            candidateMeta.lanes.some(
+              (l) => l.toUpperCase() === targetLane.toUpperCase()
+            ));
 
-      let synergyScore = 0;
-      let primaryTooltip = '';
-      let bestEffectiveWr = 0;
-      let matchedAllyName = '';
+        let synergyScore = 0;
+        let primaryTooltip = '';
+        let bestEffectiveWr = 0;
+        let matchedAllyName = '';
 
-      if (userLocked.length > 0) {
         userLocked.forEach((ally) => {
           const allyId = Number(ally.id);
           const allyMeta = metaById.get(allyId);
@@ -263,7 +255,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
           );
 
           const delta = matchInCandidate?.synergy_score ?? matchInAlly?.synergy_score;
-          if (delta) {
+          if (delta && delta > 0) {
             synergyScore += delta;
             const estWr = Math.round(candidateMeta.win_rate + delta);
             if (estWr > bestEffectiveWr) {
@@ -273,34 +265,28 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
             }
           }
         });
-      }
 
-      if (matchesLane) {
-        synergyScore += 25;
-      }
+        // Only recommend if this hero ACTUALLY synergizes with at least one locked ally
+        if (synergyScore > 0) {
+          let totalScore = synergyScore * 3;
+          if (matchesLane) totalScore += 25;
+          if (
+            mapConfig.synergyHeroIds.includes(String(candidateMeta.id)) ||
+            (candidateMeta.slug && mapConfig.synergyHeroIds.includes(candidateMeta.slug))
+          ) {
+            totalScore += 5;
+          }
+          totalScore += (candidateMeta.win_rate || 50) / 10;
 
-      if (
-        mapConfig.synergyHeroIds.includes(String(candidateMeta.id)) ||
-        (candidateMeta.slug && mapConfig.synergyHeroIds.includes(candidateMeta.slug))
-      ) {
-        synergyScore += 5;
-      }
-
-      synergyScore += (candidateMeta.win_rate || 50) / 10;
-
-      if (synergyScore > 0 && (matchesLane || bestEffectiveWr > 0)) {
-        synergyCandidates.push({
-          hero: fullHero,
-          score: synergyScore,
-          targetHeroName: matchedAllyName,
-          tooltip:
-            primaryTooltip ||
-            (targetLane
-              ? `Meta ${targetLane} (${candidateMeta.win_rate}% WR)`
-              : `Team Fit (${candidateMeta.win_rate}% WR)`),
-        });
-      }
-    });
+          synergyCandidates.push({
+            hero: fullHero,
+            score: totalScore,
+            targetHeroName: matchedAllyName,
+            tooltip: primaryTooltip || `Team Synergy (${Math.round(candidateMeta.win_rate)}% WR)`,
+          });
+        }
+      });
+    }
 
     synergyCandidates.sort((a, b) => b.score - a.score);
     const synergies = synergyCandidates.slice(0, 3);

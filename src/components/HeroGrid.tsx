@@ -145,45 +145,65 @@ export const HeroGrid: React.FC = () => {
     const counterScored: { id: string | number; score: number }[] = [];
     const synergyScored: { id: string | number; score: number }[] = [];
 
-    metaHeroes.forEach((h) => {
-      if (unavailableHeroIds.has(h.id) || (h.slug && unavailableHeroIds.has(h.slug))) return;
+    // Only compute counter recommendations if enemy has at least 1 hero picked
+    if (enemyPicks.length > 0) {
+      metaHeroes.forEach((h) => {
+        if (unavailableHeroIds.has(h.id) || (h.slug && unavailableHeroIds.has(h.slug))) return;
 
-      const matchesLane =
-        !targetLane ||
-        (h.lanes && h.lanes.some((l) => l.toUpperCase() === targetLane.toUpperCase()));
+        const matchesLane =
+          !targetLane ||
+          (h.lanes && h.lanes.some((l) => l.toUpperCase() === targetLane.toUpperCase()));
 
-      let cScore = 0;
-      enemyPicks.forEach((enemy) => {
-        const enemyMeta = metaMap.get(Number(enemy.id));
-        const matchInH = (h.best_counters || []).find(
-          (b) => b.id === Number(enemy.id) || b.slug === enemy.slug
-        );
-        const matchInE = (enemyMeta?.countered_by || []).find(
-          (b) => b.id === h.id || b.slug === h.slug
-        );
-        const delta = matchInH?.counter_score ?? matchInE?.counter_score;
-        if (delta) cScore += delta;
+        let cScore = 0;
+        enemyPicks.forEach((enemy) => {
+          const enemyMeta = metaMap.get(Number(enemy.id));
+          const matchInH = (h.best_counters || []).find(
+            (b) => b.id === Number(enemy.id) || b.slug === enemy.slug
+          );
+          const matchInE = (enemyMeta?.countered_by || []).find(
+            (b) => b.id === h.id || b.slug === h.slug
+          );
+          const delta = matchInH?.counter_score ?? matchInE?.counter_score;
+          if (delta && delta > 0) cScore += delta;
+        });
+
+        // Only include if it actually counters an enemy pick
+        if (cScore > 0) {
+          if (matchesLane) cScore += 25;
+          counterScored.push({ id: h.id, score: cScore });
+        }
       });
+    }
 
-      if (matchesLane) cScore += 20;
-      if (cScore > 0) counterScored.push({ id: h.id, score: cScore });
+    // Only compute synergy recommendations if friendly team has at least 1 hero picked
+    if (allyPicks.length > 0) {
+      metaHeroes.forEach((h) => {
+        if (unavailableHeroIds.has(h.id) || (h.slug && unavailableHeroIds.has(h.slug))) return;
 
-      let sScore = 0;
-      allyPicks.forEach((ally) => {
-        const allyMeta = metaMap.get(Number(ally.id));
-        const matchInH = (h.synergies || []).find(
-          (s) => s.id === Number(ally.id) || s.slug === ally.slug
-        );
-        const matchInA = (allyMeta?.synergies || []).find(
-          (s) => s.id === h.id || s.slug === h.slug
-        );
-        const delta = matchInH?.synergy_score ?? matchInA?.synergy_score;
-        if (delta) sScore += delta;
+        const matchesLane =
+          !targetLane ||
+          (h.lanes && h.lanes.some((l) => l.toUpperCase() === targetLane.toUpperCase()));
+
+        let sScore = 0;
+        allyPicks.forEach((ally) => {
+          const allyMeta = metaMap.get(Number(ally.id));
+          const matchInH = (h.synergies || []).find(
+            (s) => s.id === Number(ally.id) || s.slug === ally.slug
+          );
+          const matchInA = (allyMeta?.synergies || []).find(
+            (s) => s.id === h.id || s.slug === h.slug
+          );
+          const delta = matchInH?.synergy_score ?? matchInA?.synergy_score;
+          if (delta && delta > 0) sScore += delta;
+        });
+
+        // Only include if it actually synergizes with a friendly pick
+        if (sScore > 0) {
+          if (matchesLane) sScore += 25;
+          synergyScored.push({ id: h.id, score: sScore });
+        }
       });
-
-      if (matchesLane) sScore += 20;
-      if (sScore > 0) synergyScored.push({ id: h.id, score: sScore });
-    });
+    }
 
     counterScored.sort((a, b) => b.score - a.score);
     synergyScored.sort((a, b) => b.score - a.score);
