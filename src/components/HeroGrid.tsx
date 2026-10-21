@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import {
   Check,
   Info,
-  Maximize2,
-  Minimize2,
   Search,
   ShieldAlert,
   SlidersHorizontal,
@@ -55,8 +53,6 @@ export const HeroGrid: React.FC = () => {
     laneFilter,
     searchQuery,
     mapSynergyOnly,
-    isFullscreen,
-    toggleFullscreen,
     placeHero,
     setRoleFilter,
     setLaneFilter,
@@ -107,7 +103,7 @@ export const HeroGrid: React.FC = () => {
   const activeInfoHero = selectedHero;
 
   return (
-    <section className="flex flex-col h-full min-h-0 rounded-xl bg-transparent p-1.5 sm:p-2 gap-1.5">
+    <section className="flex flex-col h-full min-h-0 rounded-none bg-transparent gap-1.5 p-0">
       {/* Top Filter Bar: Search + Extended Full-Width Lanes + Sort Popover */}
       <div className="flex flex-col gap-1.5 pb-1 border-b border-slate-800/50 shrink-0">
         <div className="flex items-center gap-1.5 w-full">
@@ -116,17 +112,17 @@ export const HeroGrid: React.FC = () => {
             type="button"
             onClick={() => setIsSearchOpen((prev) => !prev)}
             title="Search heroes strictly by name"
-            className={`h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-lg flex items-center justify-center border transition-all cursor-pointer shrink-0 ${
+            className={`h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-none flex items-center justify-center border transition-all cursor-pointer shrink-0 ${
               isSearchOpen || searchQuery
                 ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-gold-glow'
-                : 'bg-slate-950/60 backdrop-blur-sm text-slate-300 border-slate-800/80 hover:border-slate-600 hover:text-slate-100'
+                : 'bg-slate-950/70 backdrop-blur-sm text-slate-300 border-slate-800/80 hover:border-slate-600 hover:text-slate-100'
             }`}
           >
             <Search className="h-3.5 w-3.5" />
           </button>
 
-          {/* Extended Full-Width Lanes */}
-          <div className="flex-1 flex items-center gap-1 sm:gap-1.5 w-full min-w-0">
+          {/* Extended Full-Width Lanes (Seamless, Sharp, Neutral) */}
+          <div className="flex-1 flex items-stretch gap-0 w-full min-w-0 border border-slate-800/80 bg-slate-950/70 divide-x divide-slate-800/80 rounded-none overflow-hidden">
             {LANE_TABS.map((tab) => {
               const active = laneFilter === tab.id;
               return (
@@ -134,13 +130,16 @@ export const HeroGrid: React.FC = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setLaneFilter(tab.id)}
-                  className={`flex-1 min-w-0 h-7 sm:h-7.5 inline-flex items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-1 sm:px-1.5 font-hud font-bold text-[9px] sm:text-[9.5px] uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex-1 min-w-0 h-7 sm:h-7.5 inline-flex items-center justify-center gap-1 sm:gap-1.5 rounded-none px-1 font-hud font-bold text-[9px] sm:text-[9.5px] uppercase tracking-wider transition-colors cursor-pointer whitespace-nowrap ${
                     active
-                      ? 'bg-sky-500 text-slate-950 shadow-blue-glow font-extrabold'
-                      : 'bg-slate-950/60 backdrop-blur-sm text-slate-300 border border-slate-800/80 hover:border-slate-600 hover:text-slate-100'
+                      ? 'bg-slate-200 text-slate-950 font-black'
+                      : 'bg-transparent text-slate-400 hover:bg-slate-900/80 hover:text-slate-200'
                   }`}
                 >
-                  <LaneIcon lane={tab.lane} className="h-3.5 w-3.5 shrink-0" />
+                  <LaneIcon
+                    lane={tab.lane}
+                    className={`h-3.5 w-3.5 shrink-0 ${active ? 'text-slate-950' : ''}`}
+                  />
                   <span className="truncate">{tab.label}</span>
                 </button>
               );
@@ -153,10 +152,10 @@ export const HeroGrid: React.FC = () => {
               type="button"
               onClick={() => setIsFilterOpen((prev) => !prev)}
               title="Filter & sort heroes"
-              className={`h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-lg flex items-center justify-center border transition-all cursor-pointer ${
+              className={`h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-none flex items-center justify-center border transition-all cursor-pointer ${
                 isFilterOpen || sortOrder !== 'RELEASE_ASC' || roleFilter !== 'ALL'
                   ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-gold-glow'
-                  : 'bg-slate-950/60 backdrop-blur-sm text-slate-300 border-slate-800/80 hover:border-slate-600 hover:text-slate-100'
+                  : 'bg-slate-950/70 backdrop-blur-sm text-slate-300 border-slate-800/80 hover:border-slate-600 hover:text-slate-100'
               }`}
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -542,23 +541,6 @@ export const HeroGrid: React.FC = () => {
       {/* Live Tactical Composition & Coach Panel */}
       <div className="shrink-0">
         <TacticalCoachPanel />
-      </div>
-
-      {/* Subtle Utility Row: Fullscreen button */}
-      <div className="shrink-0 flex items-center justify-end px-1">
-        <button
-          type="button"
-          onClick={toggleFullscreen}
-          className="flex items-center gap-1 rounded border border-slate-800 bg-slate-950/70 px-2 py-1 text-[10px] font-hud font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 hover:border-slate-600 transition"
-          title="Toggle Fullscreen"
-        >
-          {isFullscreen ? (
-            <Minimize2 className="h-3 w-3" />
-          ) : (
-            <Maximize2 className="h-3 w-3" />
-          )}
-          <span>Fullscreen</span>
-        </button>
       </div>
     </section>
   );
