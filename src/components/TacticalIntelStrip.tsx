@@ -2,9 +2,8 @@ import React, { useMemo } from 'react';
 import {
   AlertTriangle,
   BarChart2,
-  Shield,
   Sparkles,
-  Swords,
+  Target,
   X,
   Zap,
 } from 'lucide-react';
@@ -41,7 +40,6 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
   const mapConfig = MAP_EFFECTS_CONFIG[mapTrait];
 
   const userTeamEnum = userTeamSide === 'blue' ? 'BLUE' : 'RED';
-  const opponentTeamEnum = userTeamSide === 'blue' ? 'RED' : 'BLUE';
 
   const userPicks = userTeamSide === 'blue' ? bluePicks : redPicks;
   const opponentPicks = userTeamSide === 'blue' ? redPicks : bluePicks;
@@ -69,66 +67,53 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     [opponentPicks]
   );
 
-  // Determine which slot on YOUR TEAM is currently targeted
+  // Determine which slot is currently targeted
   const activeSlotTarget = useMemo(() => {
-    // 1. If activeSlot is explicitly an empty or active slot on YOUR TEAM
-    if (activeSlot?.type === 'PICK' && activeSlot?.team === userTeamEnum) {
+    // 1. If activeSlot is explicitly selected on the board
+    if (activeSlot?.type === 'PICK') {
       const laneConfig = DEDICATED_LANES[activeSlot.index] || DEDICATED_LANES[0];
       return {
         slotIndex: activeSlot.index,
+        team: activeSlot.team,
         laneConfig,
         targetLane: laneConfig.lane,
-        label: `YOUR ${laneConfig.shortLabel} PICK`,
-        isOpponentSlot: false,
+        label: `${activeSlot.team} ${laneConfig.shortLabel}`,
       };
     }
 
-    // 2. If activeSlot is an OPPONENT slot, we can show we are countering their slot
-    if (activeSlot?.type === 'PICK' && activeSlot?.team === opponentTeamEnum) {
-      const oppLaneConfig = DEDICATED_LANES[activeSlot.index] || DEDICATED_LANES[0];
-      return {
-        slotIndex: activeSlot.index,
-        laneConfig: oppLaneConfig,
-        targetLane: oppLaneConfig.lane,
-        label: `VS OPP ${oppLaneConfig.shortLabel}`,
-        isOpponentSlot: true,
-      };
-    }
-
-    // 3. If activeSlot is a BAN slot
     if (activeSlot?.type === 'BAN') {
-      const isUserBan = activeSlot.team === userTeamEnum;
       return {
         slotIndex: activeSlot.index,
+        team: activeSlot.team,
         laneConfig: null,
         targetLane: null,
-        label: isUserBan ? `YOUR BAN #${activeSlot.index + 1}` : `OPP BAN #${activeSlot.index + 1}`,
-        isOpponentSlot: !isUserBan,
+        label: `${activeSlot.team} BAN #${activeSlot.index + 1}`,
       };
     }
 
-    // 4. Default: Find the first empty slot on YOUR TEAM
-    const firstEmptyIdx = userPicks.findIndex((p) => p === null);
+    // 2. Default: Find first empty slot on active team
+    const targetTeam = userTeamEnum;
+    const picks = targetTeam === 'BLUE' ? bluePicks : redPicks;
+    const firstEmptyIdx = picks.findIndex((p) => p === null);
     if (firstEmptyIdx !== -1) {
       const laneConfig = DEDICATED_LANES[firstEmptyIdx];
       return {
         slotIndex: firstEmptyIdx,
+        team: targetTeam,
         laneConfig,
         targetLane: laneConfig.lane,
-        label: `YOUR ${laneConfig.shortLabel} PICK`,
-        isOpponentSlot: false,
+        label: `${targetTeam} ${laneConfig.shortLabel}`,
       };
     }
 
-    // All slots on YOUR TEAM filled
     return {
       slotIndex: -1,
+      team: targetTeam,
       laneConfig: null,
       targetLane: null,
-      label: 'YOUR TEAM COMPLETE',
-      isOpponentSlot: false,
+      label: 'DRAFT INTEL',
     };
-  }, [activeSlot, userTeamEnum, opponentTeamEnum, userPicks]);
+  }, [activeSlot, userTeamEnum, bluePicks, redPicks]);
 
   // Compute Targeted Enemy Counters (3-4 heroes) & Team Synergies (2-3 heroes) for YOUR TEAM
   const { topCounters, topSynergies } = useMemo(() => {
@@ -356,8 +341,8 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
       return;
     }
 
-    // 2. If targetSlot index is valid on YOUR TEAM
-    if (activeSlotTarget.slotIndex >= 0 && !activeSlotTarget.isOpponentSlot) {
+    // 2. If targetSlot index is valid on the active team
+    if (activeSlotTarget.slotIndex >= 0 && activeSlotTarget.team === userTeamEnum) {
       placeHero(hero, {
         type: 'PICK',
         team: userTeamEnum,
@@ -488,22 +473,16 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
         /* STATE 1: SINGLE-PERSPECTIVE DRAFT RECOMMENDATIONS        */
         /* ========================================================= */
         <div className="flex items-center justify-between w-full min-w-0 gap-2 sm:gap-3 animate-fadeIn">
-          {/* 1. Left Indicator: [ 🛡️ YOUR {LANE} PICK ] badge */}
+          {/* 1. Left Indicator: [ 🎯 {TEAM} {LANE} ] badge */}
           <div className="shrink-0 flex items-center">
             <div
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-hud font-bold uppercase tracking-wider shadow-sm border ${
-                activeSlotTarget.isOpponentSlot
-                  ? 'bg-slate-900/90 border-slate-700/80 text-slate-300'
-                  : userTeamSide === 'blue'
+                activeSlotTarget.team === 'BLUE'
                   ? 'bg-blue-950/80 border-blue-500/60 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.3)]'
                   : 'bg-rose-950/80 border-rose-500/60 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.3)]'
               }`}
             >
-              {activeSlotTarget.isOpponentSlot ? (
-                <Swords className="h-3 w-3 text-slate-400 shrink-0" />
-              ) : (
-                <Shield className="h-3 w-3 text-amber-400 shrink-0" />
-              )}
+              <Target className="h-3 w-3 shrink-0" />
               <span className="truncate">{activeSlotTarget.label}</span>
             </div>
           </div>
@@ -560,12 +539,12 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
             </div>
           </div>
 
-          {/* 4. Right: Your Team Balance Metric [ 📊 YOUR COMP: {phys}% Phys / {mag}% Mag ] */}
+          {/* 4. Right: Team Balance Metric [ 📊 COMP: {phys}% Phys / {mag}% Mag ] */}
           <div className="shrink-0 flex items-center">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900/90 border border-slate-800 text-[10px] sm:text-[11px] font-hud shadow-sm">
               <span className="text-amber-400 font-bold flex items-center gap-1">
                 <BarChart2 className="h-3 w-3 text-amber-400 shrink-0" />
-                <span className="hidden xl:inline">YOUR COMP:</span>
+                <span className="hidden xl:inline">COMP:</span>
               </span>
               <span className="font-semibold text-slate-200">
                 {teamBalanceMetric.physPct}% Phys / {teamBalanceMetric.magPct}% Mag
@@ -573,7 +552,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
               {teamBalanceMetric.warning && (
                 <span
                   className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-bold"
-                  title={`Warning for Your Team: ${teamBalanceMetric.warning}`}
+                  title={`Composition Warning: ${teamBalanceMetric.warning}`}
                 >
                   <AlertTriangle className="h-2.5 w-2.5 text-amber-400 shrink-0" />
                   <span>{teamBalanceMetric.warning}</span>
