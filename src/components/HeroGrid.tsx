@@ -360,7 +360,6 @@ export const HeroGrid: React.FC = () => {
                 className={`group relative flex flex-col items-center p-0.5 text-center transition-all duration-150 focus:outline-none ${
                   disabled ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'
                 }`}
-                title={disabled ? undefined : `${hero.name} (Click or drag to pick / ban)`}
               >
                 {/* Circular Hero Avatar */}
                 <div
