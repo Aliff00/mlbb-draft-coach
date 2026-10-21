@@ -28,7 +28,13 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
   const isBlue = team === 'BLUE';
 
   return (
-    <aside className="h-full w-full flex flex-col min-h-0 rounded-none overflow-hidden border border-slate-800/80 bg-slate-950/40 backdrop-blur-sm shadow-2xl select-none">
+    <aside
+      className={`h-full w-full flex flex-col min-h-0 rounded-none overflow-hidden backdrop-blur-md select-none transition-all ${
+        isBlue
+          ? 'border border-blue-500/30 border-l-[3px] border-l-blue-400 bg-gradient-to-r from-blue-950/40 via-slate-950/70 to-slate-950/50 shadow-[0_0_25px_rgba(37,99,235,0.2)]'
+          : 'border border-rose-500/30 border-r-[3px] border-r-rose-400 bg-gradient-to-l from-rose-950/40 via-slate-950/70 to-slate-950/50 shadow-[0_0_25px_rgba(244,63,94,0.2)]'
+      }`}
+    >
       {picks.map((hero, idx) => {
         const laneCfg = DEDICATED_LANES[idx] || DEDICATED_LANES[0];
         const isActive =
@@ -71,7 +77,11 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
               }
             }}
             className={`group relative flex-1 min-h-0 w-full flex flex-col justify-end overflow-hidden cursor-pointer transition-all duration-200 ${
-              idx < picks.length - 1 ? 'border-b border-white/10' : ''
+              idx < picks.length - 1
+                ? isBlue
+                  ? 'border-b border-blue-500/20'
+                  : 'border-b border-rose-500/20'
+                : ''
             } ${
               hero
                 ? isBlue
@@ -81,7 +91,9 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
                 ? isBlue
                   ? 'bg-gradient-to-r from-blue-600/40 via-blue-600/15 to-transparent'
                   : 'bg-gradient-to-l from-red-600/40 via-red-600/15 to-transparent'
-                : 'bg-[#0b1220]/50 hover:bg-[#0f172a]/70'
+                : isBlue
+                ? 'bg-gradient-to-r from-blue-950/30 via-slate-950/50 to-slate-950/70 hover:from-blue-900/40 hover:to-slate-900/80'
+                : 'bg-gradient-to-l from-rose-950/30 via-slate-950/50 to-slate-950/70 hover:from-rose-900/40 hover:to-slate-900/80'
             } ${
               isActive
                 ? isBlue
@@ -156,7 +168,12 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
 
                 {/* Label Area at the Bottom (Left-Aligned for both Red and Blue) */}
                 <div className="relative z-10 w-full flex items-baseline justify-start gap-1.5 sm:gap-2 pb-2 px-2.5 pointer-events-none text-left min-w-0">
-                  <LaneIcon lane={laneCfg.lane} className="h-3.5 w-3.5 shrink-0 text-sky-400 drop-shadow self-center" />
+                  <LaneIcon
+                    lane={laneCfg.lane}
+                    className={`h-3.5 w-3.5 shrink-0 drop-shadow self-center ${
+                      isBlue ? 'text-sky-400' : 'text-rose-400'
+                    }`}
+                  />
                   <span className="truncate font-body font-bold text-xs sm:text-sm tracking-wide text-white drop-shadow-md">
                     {hero.name}
                   </span>
@@ -171,7 +188,13 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
                 <LaneIcon
                   lane={laneCfg.lane}
                   className={`h-3.5 w-3.5 shrink-0 drop-shadow transition-colors ${
-                    isActive ? 'text-sky-300' : 'text-slate-400/80'
+                    isActive
+                      ? isBlue
+                        ? 'text-sky-300'
+                        : 'text-rose-300'
+                      : isBlue
+                      ? 'text-sky-400/75'
+                      : 'text-rose-400/75'
                   }`}
                 />
               </div>

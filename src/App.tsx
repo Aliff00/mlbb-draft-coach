@@ -41,8 +41,10 @@ export const App: React.FC = () => {
       {/* Main 3-Column Draft Stage */}
       <main className="relative z-10 grid flex-1 min-h-0 grid-cols-12 gap-2.5 p-2 sm:p-2.5">
         {/* Left Column: Blue Team's 5 Dedicated Lane Pick Slots (Aligned to the Left) */}
-        <div className="col-span-3 h-full min-h-0 flex items-center justify-start">
-          <div className="w-[84%] max-w-[220px] h-[92%] sm:h-[94%] min-h-0 flex flex-col justify-center">
+        <div className="col-span-3 h-full min-h-0 flex items-center justify-start relative">
+          {/* Blue Team Ambient Glow Accent */}
+          <div className="absolute -left-12 inset-y-6 w-56 bg-blue-600/15 blur-3xl pointer-events-none rounded-full" />
+          <div className="w-[84%] max-w-[220px] h-[92%] sm:h-[94%] min-h-0 flex flex-col justify-center relative z-10">
             <TeamColumn team="BLUE" />
           </div>
         </div>
@@ -53,8 +55,10 @@ export const App: React.FC = () => {
         </div>
 
         {/* Right Column: Red Team's 5 Dedicated Lane Pick Slots (Aligned to the Right) */}
-        <div className="col-span-3 h-full min-h-0 flex items-center justify-end">
-          <div className="w-[84%] max-w-[220px] h-[92%] sm:h-[94%] min-h-0 flex flex-col justify-center">
+        <div className="col-span-3 h-full min-h-0 flex items-center justify-end relative">
+          {/* Red Team Ambient Glow Accent */}
+          <div className="absolute -right-12 inset-y-6 w-56 bg-rose-600/15 blur-3xl pointer-events-none rounded-full" />
+          <div className="w-[84%] max-w-[220px] h-[92%] sm:h-[94%] min-h-0 flex flex-col justify-center relative z-10">
             <TeamColumn team="RED" />
           </div>
         </div>

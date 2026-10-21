@@ -186,8 +186,11 @@ export const TopBar: React.FC = () => {
       <header className="relative z-20 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md px-3 sm:px-4 py-2 shadow-xl">
         <div className="grid grid-cols-12 items-center gap-2">
           {/* Left: Blue Team 5 Quick Ban Chips */}
-          <div className="col-span-12 sm:col-span-3 flex items-center gap-1.5 justify-start">
-            {[0, 1, 2, 3, 4].map((idx) => renderBanChip('BLUE', idx))}
+          <div className="col-span-12 sm:col-span-3 flex items-center justify-start relative">
+            <div className="absolute -left-2 inset-y-0 w-28 bg-blue-600/15 blur-xl pointer-events-none rounded-full" />
+            <div className="relative z-10 flex items-center gap-1.5">
+              {[0, 1, 2, 3, 4].map((idx) => renderBanChip('BLUE', idx))}
+            </div>
           </div>
 
           {/* Center: Tactician Toolbar Actions */}
@@ -290,8 +293,11 @@ export const TopBar: React.FC = () => {
           </div>
 
           {/* Right: Red Team 5 Quick Ban Chips */}
-          <div className="col-span-12 sm:col-span-3 flex items-center gap-1.5 justify-end">
-            {[0, 1, 2, 3, 4].map((idx) => renderBanChip('RED', idx))}
+          <div className="col-span-12 sm:col-span-3 flex items-center justify-end relative">
+            <div className="absolute -right-2 inset-y-0 w-28 bg-rose-600/15 blur-xl pointer-events-none rounded-full" />
+            <div className="relative z-10 flex items-center gap-1.5">
+              {[0, 1, 2, 3, 4].map((idx) => renderBanChip('RED', idx))}
+            </div>
           </div>
         </div>
       </header>
