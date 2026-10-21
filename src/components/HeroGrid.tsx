@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
   Check,
+  Filter,
   Info,
   Search,
   ShieldAlert,
-  SlidersHorizontal,
   Swords,
   X,
 } from 'lucide-react';
@@ -158,7 +158,7 @@ export const HeroGrid: React.FC = () => {
                   : 'bg-slate-950/70 backdrop-blur-sm text-slate-400 border-slate-800/80 hover:bg-white/[0.04] hover:text-slate-200'
               }`}
             >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <Filter className="h-3.5 w-3.5" />
             </button>
 
             {isFilterOpen && (
