@@ -53,8 +53,10 @@ export const TopBar: React.FC = () => {
     toggleFullscreen,
     user,
     savedDrafts,
+    placeHero,
   } = useDraftStore();
 
+  const [dragOverBan, setDragOverBan] = useState<string | null>(null);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [isMapDropdownOpen, setIsMapDropdownOpen] = useState(false);
@@ -74,40 +76,75 @@ export const TopBar: React.FC = () => {
       activeSlot?.team === team &&
       activeSlot?.index === slotIdx;
 
+    const isBanDropTarget = dragOverBan === `${team}-${slotIdx}`;
+
     return (
       <div
         key={`${team}-ban-${slotIdx}`}
         draggable={Boolean(hero)}
         onDragStart={(e) => {
-          e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'BAN', team, index: slotIdx }));
+          const payload = JSON.stringify({ type: 'BAN', team, index: slotIdx, hero });
+          e.dataTransfer.setData('application/json', payload);
+          e.dataTransfer.setData('text/plain', payload);
+          e.dataTransfer.effectAllowed = 'copyMove';
         }}
         onDragOver={(e) => {
           e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
+          e.dataTransfer.dropEffect = 'copy';
+        }}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          setDragOverBan(`${team}-${slotIdx}`);
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+          if (dragOverBan === `${team}-${slotIdx}`) setDragOverBan(null);
         }}
         onDrop={(e) => {
           e.preventDefault();
+          setDragOverBan(null);
           try {
-            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            const raw =
+              e.dataTransfer.getData('application/json') ||
+              e.dataTransfer.getData('text/plain');
+            if (!raw) return;
+            const data = JSON.parse(raw);
+
+            // Case 1: Hero dragged from Hero Grid -> Ban hero
+            if (data.type === 'HERO' && data.hero) {
+              placeHero(data.hero, { type: 'BAN', team, index: slotIdx });
+              return;
+            }
+
+            // Case 2: Swapping within the team bans
             if (data.type === 'BAN' && data.team === team && data.index !== slotIdx) {
               swapBanSlots(team, data.index, slotIdx);
+              return;
             }
-          } catch {
-            // Ignore parse errors
+
+            // Case 3: Moved ban from another slot
+            if (data.type === 'BAN' && data.hero) {
+              placeHero(data.hero, { type: 'BAN', team, index: slotIdx });
+              return;
+            }
+          } catch (err) {
+            console.error('Ban slot drop error:', err);
           }
         }}
         onClick={() => setActiveSlot({ type: 'BAN', team, index: slotIdx })}
         className="group relative h-10 w-10 sm:h-11 sm:w-11 lg:h-12 lg:w-12 flex items-center justify-center cursor-pointer select-none"
         title={
           hero
-            ? `${team} Ban ${slotIdx + 1}: ${hero.name} (Click to select/replace, drag to swap)`
-            : `${team} Ban Slot ${slotIdx + 1} (Click to set active ban)`
+            ? `${team} Ban ${slotIdx + 1}: ${hero.name} (Drag to swap with another ban, or drag hero here to replace)`
+            : `${team} Ban Slot ${slotIdx + 1} (Drag hero here to ban, or click to select)`
         }
       >
         {/* Circular Avatar Container */}
         <div
           className={`relative h-full w-full rounded-full border overflow-hidden transition-all duration-150 flex items-center justify-center ${
-            isActive
+            isBanDropTarget
+              ? 'ring-2 ring-amber-400 scale-110 z-30 shadow-gold-glow'
+              : isActive
               ? isBlue
                 ? 'border-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.45)] ring-1 ring-sky-400/40'
                 : 'border-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.45)] ring-1 ring-rose-400/40'

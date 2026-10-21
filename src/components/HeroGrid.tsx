@@ -325,8 +325,19 @@ export const HeroGrid: React.FC = () => {
                 key={hero.id}
                 type="button"
                 disabled={disabled}
+                draggable={!disabled}
+                onDragStart={(e) => {
+                  if (disabled) return;
+                  const payload = JSON.stringify({ type: 'HERO', hero });
+                  e.dataTransfer.setData('application/json', payload);
+                  e.dataTransfer.setData('text/plain', payload);
+                  e.dataTransfer.effectAllowed = 'copyMove';
+                }}
                 onClick={() => placeHero(hero)}
-                className="group relative flex flex-col items-center p-0.5 text-center transition-all duration-150 cursor-pointer focus:outline-none"
+                className={`group relative flex flex-col items-center p-0.5 text-center transition-all duration-150 focus:outline-none ${
+                  disabled ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'
+                }`}
+                title={disabled ? undefined : `${hero.name} (Click or drag to pick / ban)`}
               >
                 {/* Circular Hero Avatar */}
                 <div

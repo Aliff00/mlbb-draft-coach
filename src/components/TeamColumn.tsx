@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeftRight, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useDraftStore } from '../store/useDraftStore';
 import { DEDICATED_LANES, TeamSide } from '../types/draft';
 import { getHeroBannerPosition, shouldHeroFlip } from '../data/heroBannerPositions';
@@ -15,14 +15,14 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
     bluePicks,
     redPicks,
     activeSlot,
-    swapSource,
     setActiveSlot,
     clearSlot,
     swapSlots,
-    handleSwapClick,
+    placeHero,
   } = useDraftStore();
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const picks = team === 'BLUE' ? bluePicks : redPicks;
   const isBlue = team === 'BLUE';
@@ -36,8 +36,7 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
           activeSlot?.team === team &&
           activeSlot?.index === idx;
 
-        const isSwapSelected =
-          swapSource?.team === team && swapSource?.index === idx;
+        const isDropTarget = dragOverIndex === idx;
 
         return (
           <div
@@ -45,30 +44,57 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
             draggable={Boolean(hero)}
             onDragStart={(e) => {
               setDraggedIndex(idx);
-              e.dataTransfer.setData('text/plain', JSON.stringify({ team, index: idx }));
+              const payload = JSON.stringify({ type: 'PICK', team, index: idx, hero });
+              e.dataTransfer.setData('application/json', payload);
+              e.dataTransfer.setData('text/plain', payload);
+              e.dataTransfer.effectAllowed = 'copyMove';
             }}
             onDragOver={(e) => {
               e.preventDefault();
-              e.dataTransfer.dropEffect = 'move';
+              e.dataTransfer.dropEffect = 'copy';
+            }}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setDragOverIndex(idx);
+            }}
+            onDragLeave={(e) => {
+              if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+              if (dragOverIndex === idx) setDragOverIndex(null);
             }}
             onDrop={(e) => {
               e.preventDefault();
               setDraggedIndex(null);
+              setDragOverIndex(null);
               try {
-                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-                if (data.team === team && data.index !== idx) {
-                  swapSlots(team, data.index, idx);
+                const raw =
+                  e.dataTransfer.getData('application/json') ||
+                  e.dataTransfer.getData('text/plain');
+                if (!raw) return;
+                const data = JSON.parse(raw);
+
+                // Case 1: Dropped hero from Hero Grid
+                if (data.type === 'HERO' && data.hero) {
+                  placeHero(data.hero, { type: 'PICK', team, index: idx });
+                  return;
                 }
-              } catch {
-                // Ignore parse errors
+
+                // Case 2: Swapping within the same team pick slots
+                if (data.type === 'PICK' && data.team === team && data.index !== idx) {
+                  swapSlots(team, data.index, idx);
+                  return;
+                }
+
+                // Case 3: Moved pick from another slot
+                if (data.type === 'PICK' && data.hero) {
+                  placeHero(data.hero, { type: 'PICK', team, index: idx });
+                  return;
+                }
+              } catch (err) {
+                console.error('Pick slot drop error:', err);
               }
             }}
             onClick={() => {
-              if (swapSource && swapSource.team === team && swapSource.index !== idx) {
-                swapSlots(team, swapSource.index, idx);
-              } else {
-                setActiveSlot({ type: 'PICK', team, index: idx });
-              }
+              setActiveSlot({ type: 'PICK', team, index: idx });
             }}
             className={`group relative flex-1 min-h-0 w-full flex flex-col justify-end overflow-hidden cursor-pointer transition-all duration-200 ${
               idx < picks.length - 1
@@ -92,7 +118,10 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
                   ? 'ring-1 ring-inset ring-sky-400/40'
                   : 'ring-1 ring-inset ring-rose-400/40'
                 : ''
-            } ${draggedIndex === idx ? 'opacity-50 scale-95' : ''}`}
+            } ${isDropTarget ? 'ring-2 ring-amber-400 bg-amber-500/20 scale-[1.01] z-20' : ''} ${
+              draggedIndex === idx ? 'opacity-40 scale-95' : ''
+            }`}
+            title={hero ? `${hero.name} (Drag to swap with another slot, or drag hero here to replace)` : `Empty slot (Drag hero here to pick)`}
           >
             {/* FILLED STATE: Eased Smooth 3/4 Card Hero Portrait with Center Fade */}
             {hero ? (
@@ -121,29 +150,12 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent pointer-events-none" />
                 </div>
 
-                {/* Quick Action Hover Bar (Clear & Swap) */}
+                {/* Quick Action Hover Bar (Instant Clear) */}
                 <div
                   className={`absolute top-1.5 ${
                     isBlue ? 'right-2' : 'left-2'
                   } z-30 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}
                 >
-                  {/* Swap button */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSwapClick(team, idx);
-                    }}
-                    title="Click here then click another slot on this team to swap"
-                    className={`flex h-5 w-5 items-center justify-center rounded-md border shadow transition cursor-pointer ${
-                      isSwapSelected
-                        ? 'border-amber-300 bg-amber-400 text-slate-950 scale-110'
-                        : 'border-slate-700 bg-slate-900/90 text-slate-300 hover:border-amber-400 hover:text-white'
-                    }`}
-                  >
-                    <ArrowLeftRight className="h-2.5 w-2.5" />
-                  </button>
-
                   {/* Instant Clear Button */}
                   <button
                     type="button"
