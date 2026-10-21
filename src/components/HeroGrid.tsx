@@ -141,7 +141,6 @@ export const HeroGrid: React.FC = () => {
     const opposingTeamPicks = targetTeam === 'BLUE' ? redPicks : bluePicks;
 
     const targetLane = DEDICATED_LANES[activeSlot.index]?.lane;
-    const directOpponent = activeSlot.index >= 0 ? opposingTeamPicks[activeSlot.index] : null;
 
     const enemyPicks = opposingTeamPicks.filter(Boolean) as Hero[];
     const allyPicks = targetTeamPicks.filter(Boolean) as Hero[];
@@ -160,14 +159,14 @@ export const HeroGrid: React.FC = () => {
           !targetLane ||
           (h.lanes && h.lanes.some((l) => l.toUpperCase() === targetLane.toUpperCase()));
 
+        // Strict role/lane requirement: do not recommend heroes outside the active slot role
+        if (!matchesLane) return;
+
         let cScore = 0;
-        let isDirectMatch = false;
+        let matchCount = 0;
 
         enemyPicks.forEach((enemy) => {
           const enemyMeta = metaMap.get(Number(enemy.id));
-          const isDirect =
-            directOpponent &&
-            (directOpponent.id === enemy.id || directOpponent.slug === enemy.slug);
 
           const matchInH = (h.best_counters || []).find(
             (b) => b.id === Number(enemy.id) || b.slug === enemy.slug
@@ -178,14 +177,13 @@ export const HeroGrid: React.FC = () => {
           const delta = matchInH?.counter_score ?? matchInE?.counter_score;
           if (delta && delta > 0) {
             cScore += delta;
-            if (isDirect) isDirectMatch = true;
+            matchCount++;
           }
         });
 
         // Only include if it actually counters an enemy pick
         if (cScore > 0) {
-          if (matchesLane) cScore += 35;
-          if (isDirectMatch) cScore += 65; // Direct lane matchup bonus
+          cScore += matchCount * 14;
           counterScored.push({ id: h.id, score: cScore });
         }
       });
@@ -199,6 +197,9 @@ export const HeroGrid: React.FC = () => {
         const matchesLane =
           !targetLane ||
           (h.lanes && h.lanes.some((l) => l.toUpperCase() === targetLane.toUpperCase()));
+
+        // Strict role/lane requirement: do not recommend heroes outside the active slot role
+        if (!matchesLane) return;
 
         let sScore = 0;
         allyPicks.forEach((ally) => {

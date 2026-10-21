@@ -81,14 +81,6 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     [opposingTeamPicks]
   );
 
-  // Direct lane opponent (e.g. if target slot is EXP (index 0), opposingTeamPicks[0])
-  const directLaneOpponent = useMemo(() => {
-    if (activeSlot?.type === 'PICK' && activeSlot.index >= 0 && activeSlot.index < opposingTeamPicks.length) {
-      return opposingTeamPicks[activeSlot.index] || null;
-    }
-    return null;
-  }, [activeSlot, opposingTeamPicks]);
-
   // Determine active slot target on the board
   const activeSlotTarget = useMemo(() => {
     if (activeSlot?.type === 'PICK') {
@@ -168,20 +160,17 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
               (l) => l.toUpperCase() === targetLane.toUpperCase()
             ));
 
+        // Strict role/lane requirement: do not recommend heroes outside the active slot role
+        if (!matchesLane) return;
+
         let bestScore = 0;
-        let primaryTooltip = '';
         let matchedEnemyName = '';
         let matchCount = 0;
-        let isDirectLaneMatch = false;
-        let directLaneWr = 0;
-        let directLaneScore = 0;
+        let bestWr = 0;
 
         opposingLocked.forEach((enemy) => {
           const enemyId = Number(enemy.id);
           const enemyMeta = metaById.get(enemyId);
-          const isDirectLaneOpponent =
-            directLaneOpponent &&
-            (directLaneOpponent.id === enemy.id || directLaneOpponent.slug === enemy.slug);
 
           const matchInCandidate = (candidateMeta.best_counters || []).find(
             (b) => b.id === enemyId || (b as any).hero_id === enemyId || b.slug === enemy.slug
@@ -196,31 +185,16 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
             const score = matched.counter_score || 85;
             const wr = matched.win_rate ?? Math.round(candidateMeta.win_rate || 50);
 
-            if (isDirectLaneOpponent) {
-              isDirectLaneMatch = true;
-              directLaneWr = wr;
-              directLaneScore = score;
-            }
-
             if (score > bestScore) {
               bestScore = score;
               matchedEnemyName = enemy.name;
-              primaryTooltip = `Counters ${enemy.name} (${wr}% WR)`;
+              bestWr = wr;
             }
           }
         });
 
         if (matchCount > 0) {
-          let totalRank = bestScore * 2 + matchCount * 12;
-          if (matchesLane) totalRank += 35;
-
-          // Direct Lane Counter gets maximum priority boost and dedicated tooltip
-          if (isDirectLaneMatch && directLaneOpponent) {
-            totalRank += 65;
-            bestScore = directLaneScore;
-            primaryTooltip = `Direct Lane Counter vs ${directLaneOpponent.name} (${directLaneWr}% WR)`;
-            matchedEnemyName = directLaneOpponent.name;
-          }
+          let totalRank = bestScore * 2 + matchCount * 14;
 
           if (
             mapConfig.synergyHeroIds.includes(String(candidateMeta.id)) ||
@@ -230,13 +204,16 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
           }
           totalRank += (candidateMeta.win_rate || 50) / 10;
 
+          const multiMatchNotice =
+            matchCount > 1 ? ` (+${matchCount - 1} more enemies)` : '';
+          const tooltip = `Counters ${matchedEnemyName} (${bestWr}% Matchup WR)${multiMatchNotice}`;
+
           counterCandidates.push({
             hero: fullHero,
             score: totalRank,
             badgeScore: bestScore || 88,
             targetHeroName: matchedEnemyName,
-            isDirectLaneMatch,
-            tooltip: primaryTooltip || `Counters ${matchedEnemyName || 'Enemy'}`,
+            tooltip,
           });
         }
       });
@@ -270,6 +247,9 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
             candidateMeta.lanes.some(
               (l) => l.toUpperCase() === targetLane.toUpperCase()
             ));
+
+        // Strict role/lane requirement: do not recommend heroes outside the active slot role
+        if (!matchesLane) return;
 
         let bestScore = 0;
         let primaryTooltip = '';
@@ -338,7 +318,6 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     unavailableHeroIds,
     opposingLocked,
     targetLocked,
-    directLaneOpponent,
     mapConfig,
     metaById,
     heroById,
@@ -657,10 +636,12 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                 <span>{activeSlotTarget.label}</span>
               </div>
 
-              {directLaneOpponent && (
-                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700/80 text-[10px] font-hud text-slate-300 shadow-sm">
-                  <span className="text-slate-500">VS LANE OPPONENT:</span>
-                  <span className="font-bold text-amber-300">{directLaneOpponent.name}</span>
+              {opposingLocked.length > 0 && (
+                <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700/80 text-[10px] font-hud text-slate-300 shadow-sm max-w-[320px] truncate">
+                  <span className="text-slate-500 flex-shrink-0">VS:</span>
+                  <span className="font-bold text-amber-300 truncate">
+                    {opposingLocked.map((h) => h.name).join(', ')}
+                  </span>
                 </span>
               )}
             </div>
@@ -695,7 +676,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
               </span>
 
               <div className="flex items-center gap-2 flex-shrink-0">
-                {topCounters.map(({ hero, badgeScore, tooltip, isDirectLaneMatch }) => (
+                {topCounters.map(({ hero, badgeScore, tooltip }) => (
                   <button
                     key={`rec-counter-${hero.id}`}
                     type="button"
@@ -703,23 +684,11 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                     className="relative group h-7.5 w-7.5 sm:h-8 sm:w-8 rounded-full overflow-visible flex-shrink-0 transition-transform duration-150 hover:scale-110 active:scale-95 cursor-pointer"
                     title={`${hero.name} — ${tooltip} (Click to draft into ${activeSlotTarget.label})`}
                   >
-                    <div
-                      className={`h-full w-full rounded-full overflow-hidden border bg-slate-900 shadow-sm ${
-                        isDirectLaneMatch
-                          ? 'border-amber-400 ring-2 ring-amber-400/70 shadow-[0_0_8px_rgba(251,191,36,0.5)]'
-                          : 'border-emerald-500/70 hover:border-emerald-400 ring-1 ring-emerald-500/25'
-                      }`}
-                    >
+                    <div className="h-full w-full rounded-full overflow-hidden border border-emerald-500/70 hover:border-emerald-400 bg-slate-900 shadow-sm ring-1 ring-emerald-500/25">
                       <HeroAvatar hero={hero} variant="icon" />
                       <div className="absolute inset-0 rounded-full bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                     </div>
-                    <span
-                      className={`absolute -bottom-1 -right-1 px-1 py-0.2 rounded-full text-[8.5px] font-hud font-bold leading-none shadow z-10 border ${
-                        isDirectLaneMatch
-                          ? 'bg-amber-950/95 text-amber-300 border-amber-400'
-                          : 'bg-emerald-950/95 text-emerald-300 border-emerald-500/80'
-                      }`}
-                    >
+                    <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-emerald-950/95 text-emerald-300 border border-emerald-500/80 rounded-full text-[8.5px] font-hud font-bold leading-none shadow z-10">
                       {badgeScore}
                     </span>
                   </button>
