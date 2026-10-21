@@ -97,8 +97,8 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
             } ${
               isActive
                 ? isBlue
-                  ? 'ring-1 ring-inset ring-sky-400/80 shadow-[inset_0_0_12px_rgba(56,189,248,0.2)]'
-                  : 'ring-1 ring-inset ring-rose-400/80 shadow-[inset_0_0_12px_rgba(244,63,94,0.2)]'
+                  ? 'ring-1 ring-inset ring-sky-400/40'
+                  : 'ring-1 ring-inset ring-rose-400/40'
                 : ''
             } ${draggedIndex === idx ? 'opacity-50 scale-95' : ''}`}
           >
@@ -200,24 +200,24 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
               </div>
             )}
 
-            {/* Active Turn Directional Flare (Only when slot is empty) */}
+            {/* Active Turn Directional Flare (Subtle, sleek when slot is empty) */}
             {isActive && !hero && (
               <div
                 className={`pointer-events-none absolute inset-0 z-20 ${
                   isBlue
-                    ? 'bg-gradient-to-r from-blue-500/40 via-blue-600/15 via-45% to-transparent animate-pulse'
-                    : 'bg-gradient-to-l from-red-500/40 via-red-600/15 to-transparent animate-pulse'
+                    ? 'bg-gradient-to-r from-blue-500/15 via-blue-600/5 to-transparent'
+                    : 'bg-gradient-to-l from-red-500/15 via-red-600/5 to-transparent'
                 }`}
               />
             )}
 
-            {/* Active Turn Glowing Directional Laser Edge Highlight */}
+            {/* Active Turn Glowing Directional Laser Edge Highlight (Slim, restrained) */}
             {isActive && (
               <div
-                className={`absolute bottom-0 inset-x-0 h-[2.5px] z-30 ${
+                className={`absolute bottom-0 inset-x-0 h-[1.5px] z-30 ${
                   isBlue
-                    ? 'bg-gradient-to-r from-white via-blue-500 to-transparent shadow-[0_2px_12px_rgba(59,130,246,0.8),0_0_20px_#3b82f6]'
-                    : 'bg-gradient-to-l from-white via-red-500 to-transparent shadow-[0_2px_12px_rgba(239,68,68,0.8),0_0_20px_#ef4444]'
+                    ? 'bg-gradient-to-r from-sky-300 via-blue-400 to-transparent shadow-[0_1px_4px_rgba(56,189,248,0.35)]'
+                    : 'bg-gradient-to-l from-rose-300 via-rose-400 to-transparent shadow-[0_1px_4px_rgba(244,63,94,0.35)]'
                 }`}
               />
             )}

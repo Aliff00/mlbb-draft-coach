@@ -330,12 +330,12 @@ export const HeroGrid: React.FC = () => {
               >
                 {/* Circular Hero Avatar */}
                 <div
-                  className={`relative aspect-square w-full max-w-[60px] sm:max-w-[68px] overflow-hidden rounded-full border-2 transition-all duration-150 ${
+                  className={`relative aspect-square w-full max-w-[60px] sm:max-w-[68px] overflow-hidden rounded-full border transition-all duration-150 ${
                     isSelected
-                      ? 'border-amber-400 ring-2 ring-amber-300 shadow-gold-glow scale-105 z-10'
+                      ? 'border-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.4)] scale-105 z-10'
                       : disabled
                       ? 'border-slate-900/60 opacity-30 brightness-75 cursor-not-allowed'
-                      : 'border-slate-700/70 bg-slate-900/60 hover:border-amber-400/80 hover:scale-105 hover:shadow-[0_0_12px_rgba(234,179,8,0.35)]'
+                      : 'border-slate-700/70 bg-slate-900/60 hover:border-amber-400/80 hover:scale-105 hover:shadow-[0_0_6px_rgba(234,179,8,0.25)]'
                   }`}
                 >
                   <HeroAvatar
@@ -356,7 +356,7 @@ export const HeroGrid: React.FC = () => {
                   <div
                     className={`truncate text-[9px] sm:text-[9.5px] font-semibold tracking-normal transition-colors ${
                       isSelected
-                        ? 'text-amber-300 font-bold drop-shadow-[0_0_8px_rgba(234,179,8,0.7)]'
+                        ? 'text-amber-300 font-bold'
                         : disabled
                         ? 'text-slate-500/70'
                         : 'text-[#8ea5c8] group-hover:text-sky-200'

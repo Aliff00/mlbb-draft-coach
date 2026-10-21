@@ -93,15 +93,15 @@ export const TopBar: React.FC = () => {
       >
         {/* Circular Avatar Container */}
         <div
-          className={`relative h-full w-full rounded-full border-2 overflow-hidden transition-all duration-150 flex items-center justify-center ${
+          className={`relative h-full w-full rounded-full border overflow-hidden transition-all duration-150 flex items-center justify-center ${
             isActive
               ? isBlue
-                ? 'border-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.8)] ring-2 ring-sky-300 scale-105'
-                : 'border-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.8)] ring-2 ring-rose-300 scale-105'
+                ? 'border-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.45)] ring-1 ring-sky-400/40'
+                : 'border-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.45)] ring-1 ring-rose-400/40'
               : hero
               ? isBlue
-                ? 'border-sky-500/60 bg-slate-950 shadow-[0_0_8px_rgba(56,189,248,0.3)]'
-                : 'border-rose-500/60 bg-slate-950 shadow-[0_0_8px_rgba(244,63,94,0.3)]'
+                ? 'border-sky-500/60 bg-slate-950 shadow-[0_0_4px_rgba(56,189,248,0.2)]'
+                : 'border-rose-500/60 bg-slate-950 shadow-[0_0_4px_rgba(244,63,94,0.2)]'
               : 'border-slate-800 bg-slate-950/70 hover:border-slate-600'
           }`}
         >
@@ -127,14 +127,6 @@ export const TopBar: React.FC = () => {
                 <path d="M12 17h.01" />
               </svg>
             </div>
-          )}
-
-          {isActive && (
-            <span
-              className={`absolute inset-0 rounded-full pointer-events-none animate-ping opacity-40 ${
-                isBlue ? 'bg-sky-400' : 'bg-rose-400'
-              }`}
-            />
           )}
         </div>
 
