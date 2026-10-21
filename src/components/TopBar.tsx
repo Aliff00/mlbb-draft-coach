@@ -282,130 +282,126 @@ export const TopBar: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-12 items-center gap-2">
-          {/* Left: Swap Sides Button + Blue Team 5 Quick Ban Chips */}
-          <div className="col-span-12 sm:col-span-3 flex items-center justify-start gap-1.5 sm:gap-2 relative">
-            {/* Swap Sides (Neutral styling matching Search & Filter) */}
-            <button
-              type="button"
-              onClick={swapSides}
-              className="h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full flex items-center justify-center border border-slate-800/80 bg-slate-950/70 backdrop-blur-sm text-slate-400 hover:bg-white/[0.04] hover:text-slate-200 transition-all cursor-pointer shrink-0 shadow-sm active:scale-95"
-              title="Swap Blue and Red sides completely"
-            >
-              <ArrowLeftRight className="h-3.5 w-3.5" />
-            </button>
-
+          {/* Left: Blue Team 5 Quick Ban Chips */}
+          <div className="col-span-12 sm:col-span-3 flex items-center justify-start relative">
             <div className="relative z-10 flex items-center gap-1.5">
               {[0, 1, 2, 3, 4].map((idx) => renderBanChip('BLUE', idx))}
             </div>
           </div>
 
-          {/* Center: App Name (Stuck to top) + Phone Notification Pull Down Indicator + Map Trait Centered Below */}
-          <div className="col-span-12 sm:col-span-6 flex flex-col items-center justify-start -mt-0.5">
-            {/* 1. App Title Pill (Sticking close to topmost, icon.png, down arrow underneath) */}
+          {/* Center: Top Center Cluster with Swap on Left, App Title & Map in Center, Reset on Right */}
+          <div className="col-span-12 sm:col-span-6 flex items-center justify-center gap-2 sm:gap-4 -mt-0.5">
+            {/* Swap Sides Button (Left of top center) */}
             <button
               type="button"
-              onClick={() => setIsCommandTrayOpen((prev) => !prev)}
-              className="group flex flex-col items-center justify-center px-3.5 py-0.5 rounded-b-xl border-x border-b border-slate-800/90 bg-slate-950/85 hover:bg-slate-900 hover:border-amber-400/50 transition-all cursor-pointer shadow-md select-none active:scale-95"
-              title="Pull down Overhead Command Tray"
+              onClick={swapSides}
+              className="h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full flex items-center justify-center border border-slate-800/80 bg-slate-950/70 backdrop-blur-sm text-slate-400 hover:bg-white/[0.04] hover:text-slate-200 transition-all cursor-pointer shrink-0 shadow-sm active:scale-95"
+              title="Swap sides between Your Team and Opponent"
             >
-              <div className="flex items-center gap-1.5">
-                <img
-                  src="/icon.png"
-                  alt="MLBB"
-                  className="h-3.5 w-3.5 rounded-full object-cover shadow-sm"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/images/icon.png';
-                  }}
-                />
-                <span className="font-hud font-bold uppercase tracking-wider text-[11px] sm:text-xs text-amber-400 group-hover:text-amber-300">
-                  MLBB DRAFT COACH
-                </span>
-              </div>
-              {/* Phone-style Notification Pull Down Arrow */}
-              <div className="flex items-center justify-center -mt-0.5">
-                <ChevronDown
-                  className={`h-3 w-3 text-slate-400 group-hover:text-amber-400 transition-transform duration-300 ${
-                    isCommandTrayOpen ? 'rotate-180 text-amber-400' : ''
-                  }`}
-                />
-              </div>
+              <ArrowLeftRight className="h-3.5 w-3.5" />
             </button>
 
-            {/* 2. Map Trait Dropdown: Centered below the App Name */}
-            <div className="relative mt-1">
+            {/* Center Column: App Name (Stuck to top) + Phone Notification Pull Down Indicator + Map Trait Below */}
+            <div className="flex flex-col items-center justify-start">
+              {/* 1. App Title Pill (Sticking close to topmost, icon.png, down arrow underneath) */}
               <button
                 type="button"
-                onClick={() => setIsMapDropdownOpen((prev) => !prev)}
-                className={`flex items-center gap-1.5 rounded-full border px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-hud font-bold uppercase tracking-wider transition cursor-pointer select-none ${mapTheme.tagBg} ${mapTheme.glow} shadow-sm hover:border-amber-400/60`}
-                title={`Map Trait: ${mapConfig.name} — Click to change battlefield conditions`}
+                onClick={() => setIsCommandTrayOpen((prev) => !prev)}
+                className="group flex flex-col items-center justify-center px-3.5 py-0.5 rounded-b-xl border-x border-b border-slate-800/90 bg-slate-950/85 hover:bg-slate-900 hover:border-amber-400/50 transition-all cursor-pointer shadow-md select-none active:scale-95"
+                title="Pull down Overhead Command Tray"
               >
-                <MapEffectIcon effect={mapTrait} className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                <span className="truncate max-w-[120px] sm:max-w-none">
-                  {mapConfig.shortName}
-                </span>
-                <ChevronDown
-                  className={`h-3 w-3 opacity-80 transition-transform duration-200 ${
-                    isMapDropdownOpen ? 'rotate-180' : ''
-                  }`}
-                />
+                <div className="flex items-center gap-1.5">
+                  <img
+                    src="/icon.png"
+                    alt="MLBB"
+                    className="h-3.5 w-3.5 rounded-full object-cover shadow-sm"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/icon.png';
+                    }}
+                  />
+                  <span className="font-hud font-bold uppercase tracking-wider text-[11px] sm:text-xs text-amber-400 group-hover:text-amber-300">
+                    MLBB DRAFT COACH
+                  </span>
+                </div>
+                {/* Phone-style Notification Pull Down Arrow */}
+                <div className="flex items-center justify-center -mt-0.5">
+                  <ChevronDown
+                    className={`h-3 w-3 text-slate-400 group-hover:text-amber-400 transition-transform duration-300 ${
+                      isCommandTrayOpen ? 'rotate-180 text-amber-400' : ''
+                    }`}
+                  />
+                </div>
               </button>
 
-              {/* Map Trait Popover Menu */}
-              {isMapDropdownOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsMapDropdownOpen(false)}
+              {/* 2. Map Trait Dropdown: Centered below the App Name */}
+              <div className="relative mt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsMapDropdownOpen((prev) => !prev)}
+                  className={`flex items-center gap-1.5 rounded-full border px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-hud font-bold uppercase tracking-wider transition cursor-pointer select-none ${mapTheme.tagBg} ${mapTheme.glow} shadow-sm hover:border-amber-400/60`}
+                  title={`Map Trait: ${mapConfig.name} — Click to change battlefield conditions`}
+                >
+                  <MapEffectIcon effect={mapTrait} className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="truncate max-w-[120px] sm:max-w-none">
+                    {mapConfig.shortName}
+                  </span>
+                  <ChevronDown
+                    className={`h-3 w-3 opacity-80 transition-transform duration-200 ${
+                      isMapDropdownOpen ? 'rotate-180' : ''
+                    }`}
                   />
-                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-72 rounded-xl border border-slate-700 bg-slate-950/95 p-2 shadow-2xl backdrop-blur-md z-50 text-left">
-                    <div className="text-[10px] font-hud font-bold uppercase tracking-wider text-slate-400 pb-1.5 mb-1 border-b border-slate-800">
-                      Select Battlefield Map Trait
-                    </div>
-                    <div className="flex flex-col gap-1 font-hud">
-                      {MAP_TRAITS.map((item) => {
-                        const cfg = MAP_EFFECTS_CONFIG[item.id];
-                        const isSelected = mapTrait === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => {
-                              setMapTrait(item.id);
-                              setIsMapDropdownOpen(false);
-                            }}
-                            className={`flex flex-col gap-0.5 p-2 rounded-lg text-left transition cursor-pointer ${
-                              isSelected
-                                ? 'bg-amber-500/20 border border-amber-400/60 text-amber-200'
-                                : 'hover:bg-slate-900 border border-transparent text-slate-300 hover:text-white'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between text-xs font-bold">
-                              <span className="flex items-center gap-1.5">
-                                <MapEffectIcon effect={item.id} className="h-3.5 w-3.5" />
-                                {cfg.name}
+                </button>
+
+                {/* Map Trait Popover Menu */}
+                {isMapDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsMapDropdownOpen(false)}
+                    />
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-72 rounded-xl border border-slate-700 bg-slate-950/95 p-2 shadow-2xl backdrop-blur-md z-50 text-left">
+                      <div className="text-[10px] font-hud font-bold uppercase tracking-wider text-slate-400 pb-1.5 mb-1 border-b border-slate-800">
+                        Select Battlefield Map Trait
+                      </div>
+                      <div className="flex flex-col gap-1 font-hud">
+                        {MAP_TRAITS.map((item) => {
+                          const cfg = MAP_EFFECTS_CONFIG[item.id];
+                          const isSelected = mapTrait === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => {
+                                setMapTrait(item.id);
+                                setIsMapDropdownOpen(false);
+                              }}
+                              className={`flex flex-col gap-0.5 p-2 rounded-lg text-left transition cursor-pointer ${
+                                isSelected
+                                  ? 'bg-amber-500/20 border border-amber-400/60 text-amber-200'
+                                  : 'hover:bg-slate-900 border border-transparent text-slate-300 hover:text-white'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between text-xs font-bold">
+                                <span className="flex items-center gap-1.5">
+                                  <MapEffectIcon effect={item.id} className="h-3.5 w-3.5" />
+                                  {cfg.name}
+                                </span>
+                                {isSelected && <Check className="h-3.5 w-3.5 text-amber-400" />}
+                              </div>
+                              <span className="text-[9.5px] text-slate-400 leading-tight">
+                                {cfg.tacticalTip}
                               </span>
-                              {isSelected && <Check className="h-3.5 w-3.5 text-amber-400" />}
-                            </div>
-                            <span className="text-[9.5px] text-slate-400 leading-tight">
-                              {cfg.tacticalTip}
-                            </span>
-                          </button>
-                        );
-                      })}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Red Team 5 Quick Ban Chips + Reset Board Button */}
-          <div className="col-span-12 sm:col-span-3 flex items-center justify-end gap-1.5 sm:gap-2 relative">
-            <div className="relative z-10 flex items-center gap-1.5">
-              {[0, 1, 2, 3, 4].map((idx) => renderBanChip('RED', idx))}
+                  </>
+                )}
+              </div>
             </div>
 
-            {/* Reset Board (Neutral styling matching Search & Filter) */}
+            {/* Reset Board Button (Right of top center) */}
             <button
               type="button"
               onClick={() => setIsResetModalOpen(true)}
@@ -414,6 +410,13 @@ export const TopBar: React.FC = () => {
             >
               <RotateCcw className="h-3.5 w-3.5" />
             </button>
+          </div>
+
+          {/* Right: Red Team 5 Quick Ban Chips */}
+          <div className="col-span-12 sm:col-span-3 flex items-center justify-end relative">
+            <div className="relative z-10 flex items-center gap-1.5">
+              {[0, 1, 2, 3, 4].map((idx) => renderBanChip('RED', idx))}
+            </div>
           </div>
         </div>
       </header>
