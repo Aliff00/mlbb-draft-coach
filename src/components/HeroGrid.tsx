@@ -119,12 +119,12 @@ export const HeroGrid: React.FC = () => {
       {/* Top Filter Bar: Search + Extended Full-Width Lanes + Sort Popover */}
       <div className="flex flex-col gap-1.5 pb-1 border-b border-slate-800/50 shrink-0">
         <div className="flex items-center gap-1.5 w-full">
-          {/* Search Icon Toggle */}
+          {/* Search Icon Toggle (Round Container) */}
           <button
             type="button"
             onClick={() => setIsSearchOpen((prev) => !prev)}
             title="Search heroes strictly by name"
-            className={`h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-none flex items-center justify-center border transition-all cursor-pointer shrink-0 ${
+            className={`h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full flex items-center justify-center border transition-all cursor-pointer shrink-0 ${
               isSearchOpen || searchQuery
                 ? 'bg-gradient-to-t from-white/20 via-white/5 to-transparent text-white border-slate-700 shadow-[inset_0_-2px_0_rgba(255,255,255,0.75)]'
                 : 'bg-slate-950/70 backdrop-blur-sm text-slate-400 border-slate-800/80 hover:bg-white/[0.04] hover:text-slate-200'
@@ -158,13 +158,13 @@ export const HeroGrid: React.FC = () => {
             })}
           </div>
 
-          {/* Filter / Sort Popover */}
+          {/* Filter / Sort Popover (Round Container) */}
           <div className="relative shrink-0">
             <button
               type="button"
               onClick={() => setIsFilterOpen((prev) => !prev)}
               title="Filter & sort heroes"
-              className={`h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-none flex items-center justify-center border transition-all cursor-pointer ${
+              className={`h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full flex items-center justify-center border transition-all cursor-pointer ${
                 isFilterOpen || sortOrder !== 'RELEASE_ASC' || roleFilter !== 'ALL'
                   ? 'bg-gradient-to-t from-white/20 via-white/5 to-transparent text-white border-slate-700 shadow-[inset_0_-2px_0_rgba(255,255,255,0.75)]'
                   : 'bg-slate-950/70 backdrop-blur-sm text-slate-400 border-slate-800/80 hover:bg-white/[0.04] hover:text-slate-200'

@@ -415,6 +415,15 @@ export const CommandTray: React.FC<CommandTrayProps> = ({
               </div>
             )}
           </div>
+
+          {/* Phone-style Notification Shade Bottom Pull Handle */}
+          <div
+            className="flex flex-col items-center justify-center pt-3 -mb-1 cursor-pointer group select-none"
+            onClick={onClose}
+            title="Slide up to close tray"
+          >
+            <div className="w-12 h-1 rounded-full bg-slate-700/80 group-hover:bg-amber-400/80 transition-colors" />
+          </div>
         </div>
       </div>
     </>

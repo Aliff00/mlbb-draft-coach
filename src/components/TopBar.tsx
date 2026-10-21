@@ -6,7 +6,6 @@ import {
   ChevronDown,
   RotateCcw,
   X,
-  Zap,
 } from 'lucide-react';
 import { useDraftStore } from '../store/useDraftStore';
 import {
@@ -270,7 +269,7 @@ export const TopBar: React.FC = () => {
         onOpenSummaryModal={() => setIsSummaryModalOpen(true)}
       />
 
-      <header className="relative z-20 bg-transparent px-3 sm:px-6 lg:px-8 py-2.5">
+      <header className="relative z-20 bg-transparent px-3 sm:px-6 lg:px-8 pt-0 pb-2">
         {/* Background Team Color Flow (Left Blue & Right Red seamlessly flowing in from screen edges) */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* Blue flow from left edge */}
@@ -283,41 +282,65 @@ export const TopBar: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-12 items-center gap-2">
-          {/* Left: Blue Team 5 Quick Ban Chips (Floating directly on the flowing blue background) */}
-          <div className="col-span-12 sm:col-span-3 flex items-center justify-start relative">
+          {/* Left: Swap Sides Button + Blue Team 5 Quick Ban Chips */}
+          <div className="col-span-12 sm:col-span-3 flex items-center justify-start gap-1.5 sm:gap-2 relative">
+            {/* Swap Sides (Neutral styling matching Search & Filter) */}
+            <button
+              type="button"
+              onClick={swapSides}
+              className="h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full flex items-center justify-center border border-slate-800/80 bg-slate-950/70 backdrop-blur-sm text-slate-400 hover:bg-white/[0.04] hover:text-slate-200 transition-all cursor-pointer shrink-0 shadow-sm active:scale-95"
+              title="Swap Blue and Red sides completely"
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+            </button>
+
             <div className="relative z-10 flex items-center gap-1.5">
               {[0, 1, 2, 3, 4].map((idx) => renderBanChip('BLUE', idx))}
             </div>
           </div>
 
-          {/* Center: Distraction-Free Center Command Cluster */}
-          <div className="col-span-12 sm:col-span-6 flex items-center justify-center gap-2 sm:gap-2.5 flex-wrap">
-            {/* 1. App Title Pill (Interactive Button -> triggers CommandTray) */}
+          {/* Center: App Name (Stuck to top) + Phone Notification Pull Down Indicator + Map Trait Centered Below */}
+          <div className="col-span-12 sm:col-span-6 flex flex-col items-center justify-start -mt-0.5">
+            {/* 1. App Title Pill (Sticking close to topmost, icon.png, down arrow underneath) */}
             <button
               type="button"
               onClick={() => setIsCommandTrayOpen((prev) => !prev)}
-              className="bg-slate-900/80 border border-slate-700/80 hover:border-amber-400/50 hover:bg-slate-900 rounded-full px-3.5 sm:px-4 py-1.5 transition-all text-amber-400 font-hud tracking-wider text-xs sm:text-sm flex items-center gap-2 shadow-sm cursor-pointer select-none active:scale-95"
-              title="Toggle Overhead Command Tray"
+              className="group flex flex-col items-center justify-center px-3.5 py-0.5 rounded-b-xl border-x border-b border-slate-800/90 bg-slate-950/85 hover:bg-slate-900 hover:border-amber-400/50 transition-all cursor-pointer shadow-md select-none active:scale-95"
+              title="Pull down Overhead Command Tray"
             >
-              <Zap className="h-3.5 w-3.5 text-amber-400 fill-amber-400/30" />
-              <span className="font-bold uppercase tracking-wider">MLBB DRAFT COACH</span>
-              <ChevronDown
-                className={`h-3.5 w-3.5 text-amber-400/80 transition-transform duration-200 ${
-                  isCommandTrayOpen ? 'rotate-180' : ''
-                }`}
-              />
+              <div className="flex items-center gap-1.5">
+                <img
+                  src="/icon.png"
+                  alt="MLBB"
+                  className="h-3.5 w-3.5 rounded-full object-cover shadow-sm"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/images/icon.png';
+                  }}
+                />
+                <span className="font-hud font-bold uppercase tracking-wider text-[11px] sm:text-xs text-amber-400 group-hover:text-amber-300">
+                  MLBB DRAFT COACH
+                </span>
+              </div>
+              {/* Phone-style Notification Pull Down Arrow */}
+              <div className="flex items-center justify-center -mt-0.5">
+                <ChevronDown
+                  className={`h-3 w-3 text-slate-400 group-hover:text-amber-400 transition-transform duration-300 ${
+                    isCommandTrayOpen ? 'rotate-180 text-amber-400' : ''
+                  }`}
+                />
+              </div>
             </button>
 
-            {/* 2. Map Trait Dropdown: [ 🌐 {MapTrait} ▾ ] */}
-            <div className="relative">
+            {/* 2. Map Trait Dropdown: Centered below the App Name */}
+            <div className="relative mt-1">
               <button
                 type="button"
                 onClick={() => setIsMapDropdownOpen((prev) => !prev)}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-hud font-bold uppercase tracking-wider transition cursor-pointer select-none ${mapTheme.tagBg} ${mapTheme.glow} shadow-sm hover:border-amber-400/60`}
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-hud font-bold uppercase tracking-wider transition cursor-pointer select-none ${mapTheme.tagBg} ${mapTheme.glow} shadow-sm hover:border-amber-400/60`}
                 title={`Map Trait: ${mapConfig.name} — Click to change battlefield conditions`}
               >
-                <MapEffectIcon effect={mapTrait} className="h-3.5 w-3.5" />
-                <span className="truncate max-w-[100px] sm:max-w-none">
+                <MapEffectIcon effect={mapTrait} className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <span className="truncate max-w-[120px] sm:max-w-none">
                   {mapConfig.shortName}
                 </span>
                 <ChevronDown
@@ -374,36 +397,23 @@ export const TopBar: React.FC = () => {
                 </>
               )}
             </div>
-
-            {/* 3. Action Icons: [ ⇄ ] (Swap Sides) and [ ↺ ] (Reset Board) */}
-            <div className="flex items-center gap-1.5">
-              {/* Swap Sides (Blue <-> Red) */}
-              <button
-                type="button"
-                onClick={swapSides}
-                className="h-8 w-8 rounded-full border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 flex items-center justify-center text-slate-300 hover:text-amber-300 hover:border-amber-400/60 transition cursor-pointer shadow-sm active:scale-95"
-                title="Swap Blue and Red sides completely"
-              >
-                <ArrowLeftRight className="h-3.5 w-3.5 text-amber-400" />
-              </button>
-
-              {/* Reset Board Button */}
-              <button
-                type="button"
-                onClick={() => setIsResetModalOpen(true)}
-                className="h-8 w-8 rounded-full border border-rose-500/40 bg-rose-950/40 hover:bg-rose-900/60 flex items-center justify-center text-rose-300 hover:border-rose-400 transition cursor-pointer shadow-sm active:scale-95"
-                title="Reset all picks and bans"
-              >
-                <RotateCcw className="h-3.5 w-3.5 text-rose-400" />
-              </button>
-            </div>
           </div>
 
-          {/* Right: Red Team 5 Quick Ban Chips (Floating directly on the flowing red background) */}
-          <div className="col-span-12 sm:col-span-3 flex items-center justify-end relative">
-            <div className="relative z-10 flex items-center gap-1.5 pr-2 sm:pr-4">
+          {/* Right: Red Team 5 Quick Ban Chips + Reset Board Button */}
+          <div className="col-span-12 sm:col-span-3 flex items-center justify-end gap-1.5 sm:gap-2 relative">
+            <div className="relative z-10 flex items-center gap-1.5">
               {[0, 1, 2, 3, 4].map((idx) => renderBanChip('RED', idx))}
             </div>
+
+            {/* Reset Board (Neutral styling matching Search & Filter) */}
+            <button
+              type="button"
+              onClick={() => setIsResetModalOpen(true)}
+              className="h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full flex items-center justify-center border border-slate-800/80 bg-slate-950/70 backdrop-blur-sm text-slate-400 hover:bg-white/[0.04] hover:text-slate-200 transition-all cursor-pointer shrink-0 shadow-sm active:scale-95"
+              title="Reset all picks and bans"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
       </header>
