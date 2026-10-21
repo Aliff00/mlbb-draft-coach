@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <rect width="48" height="48" rx="10" fill="#081829"/>
+  <!-- Speed Wind Streams -->
+  <path d="M6 16H24M10 22H32M8 28H20" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Launchpad Cloud -->
+  <path d="M22 34H37C40.3137 34 43 31.3137 43 28C43 24.85 40.57 22.26 37.45 22.03C36.93 16.92 32.61 13 27.35 13C23.47 13 20.09 15.13 18.3 18.32C17.72 18.11 17.1 18 16.45 18C13.44 18 11 20.44 11 23.45C11 23.95 11.07 24.43 11.2 24.89C9.33 25.68 8 27.54 8 29.7C8 32.08 9.92 34 12.3 34H22Z" fill="#0369a1" stroke="#38bdf8" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Speed Arrow -->
+  <path d="M28 26L34 22L28 18" stroke="#e0f2fe" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

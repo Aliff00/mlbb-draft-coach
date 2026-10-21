@@ -1,0 +1,66 @@
+import React, { useEffect } from 'react';
+import { HeroGrid } from './components/HeroGrid';
+import { OrientationOverlay } from './components/OrientationOverlay';
+import { TeamColumn } from './components/TeamColumn';
+import { TopBar } from './components/TopBar';
+import { useDraftStore } from './store/useDraftStore';
+
+export const App: React.FC = () => {
+  const { setIsFullscreen } = useDraftStore();
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, [setIsFullscreen]);
+
+  return (
+    <div
+      className="relative flex flex-col h-screen w-screen overflow-hidden bg-[#03060f] text-slate-100 select-none bg-cover bg-center bg-no-repeat border-0 rounded-none"
+      style={{
+        backgroundImage: "url('/arena-bg.jpg'), url('/images/arena-bg.jpg')",
+      }}
+    >
+      {/* Semi-transparent dark overlay so hero avatars, bans, and indicators pop with high contrast */}
+      <div className="pointer-events-none absolute inset-0 bg-slate-950/40 backdrop-brightness-95" />
+
+      {/* Mobile Portrait Rotate Prompt */}
+      <OrientationOverlay />
+
+      {/* Top Bar: Quick Bans (Blue & Red) | Tactician Toolbar [Reset, Swap Sides, Map Trait, Export] */}
+      <div className="relative z-30">
+        <TopBar />
+      </div>
+
+      {/* Main 3-Column Draft Stage */}
+      <main className="relative z-10 grid flex-1 min-h-0 grid-cols-12 gap-2.5 p-2 sm:p-2.5">
+        {/* Left Column: Blue Team's 5 Dedicated Lane Pick Slots (Aligned to the Left) */}
+        <div className="col-span-3 h-full min-h-0 flex items-center justify-start">
+          <div className="w-[84%] max-w-[220px] h-[92%] sm:h-[94%] min-h-0 flex flex-col justify-center">
+            <TeamColumn team="BLUE" />
+          </div>
+        </div>
+
+        {/* Center Column: 7-Column Hero Grid + Live Composition & Tactical Coach Panel */}
+        <div className="col-span-6 h-full min-h-0">
+          <HeroGrid />
+        </div>
+
+        {/* Right Column: Red Team's 5 Dedicated Lane Pick Slots (Aligned to the Right) */}
+        <div className="col-span-3 h-full min-h-0 flex items-center justify-end">
+          <div className="w-[84%] max-w-[220px] h-[92%] sm:h-[94%] min-h-0 flex flex-col justify-center">
+            <TeamColumn team="RED" />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default App;

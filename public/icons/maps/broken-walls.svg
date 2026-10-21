@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <rect width="48" height="48" rx="10" fill="#241208"/>
+  <path d="M8 12H20V22H8V12ZM24 12H40V22H24V12ZM8 26H16V36H8V26ZM32 26H40V36H32V26Z" fill="#78350f" stroke="#f97316" stroke-width="2.2" stroke-linejoin="round"/>
+  <!-- Crack / Breached Corridor -->
+  <path d="M18 24L22 30L26 23L30 38" stroke="#fbbf24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="22" cy="30" r="1.5" fill="#fff"/>
+  <path d="M19 14L22 19L27 15" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+</svg>

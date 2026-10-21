@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <rect width="48" height="48" rx="10" fill="#061c12"/>
+  <!-- Bush & Ambush Grass Blades -->
+  <path d="M12 38C12 28 17 20 22 14C23 22 25 28 27 38" stroke="#10b981" stroke-width="3" stroke-linecap="round"/>
+  <path d="M24 38C24 24 29 12 36 8C35 18 35 28 32 38" stroke="#34d399" stroke-width="3" stroke-linecap="round"/>
+  <path d="M6 38C7 30 11 24 16 20C15 27 15 33 14 38" stroke="#059669" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M30 38C32 30 37 24 42 22C39 29 38 34 37 38" stroke="#059669" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="22" cy="14" r="2" fill="#6ee7b7"/>
+  <circle cx="36" cy="8" r="2.5" fill="#a7f3d0"/>
+</svg>
