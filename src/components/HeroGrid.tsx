@@ -1,11 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Check,
   Filter,
-  Info,
   Search,
-  ShieldAlert,
-  Swords,
   X,
 } from 'lucide-react';
 import {
@@ -13,14 +10,17 @@ import {
   useDraftStore,
 } from '../store/useDraftStore';
 import {
+  DEDICATED_LANES,
   doesHeroMatchList,
+  Hero,
+  HeroRelationItem,
   LaneRole,
   MAP_EFFECTS_CONFIG,
 } from '../types/draft';
 import { HeroAvatar } from './HeroAvatar';
 import { LaneIcon } from './LaneIcon';
-import { getMapEffectColorTheme, MapEffectIcon } from './MapEffectIcon';
 import { TacticalCoachPanel } from './TacticalCoachPanel';
+import { TacticalIntelStrip } from './TacticalIntelStrip';
 import { setCustomHeroDragImage } from '../utils/dragGhost';
 
 export type HeroSortOrder =
@@ -44,12 +44,15 @@ const LANE_TABS: Array<{
 
 export const HeroGrid: React.FC = () => {
   const {
+    activeSlot,
     mapTrait,
     blueBans,
     redBans,
     bluePicks,
     redPicks,
     selectedHero,
+    inspectedHero,
+    setInspectedHero,
     roleFilter,
     laneFilter,
     searchQuery,
@@ -76,8 +79,6 @@ export const HeroGrid: React.FC = () => {
   }, [laneFilter, roleFilter, searchQuery]);
 
   const mapConfig = MAP_EFFECTS_CONFIG[mapTrait];
-  const mapTheme = getMapEffectColorTheme(mapTrait);
-  const hasMapSynergies = mapTrait !== 'standard' && mapConfig.synergyHeroIds.length > 0;
 
   const filteredHeroes = ALL_HEROES.filter((hero) => {
     const matchesRole =
@@ -112,7 +113,91 @@ export const HeroGrid: React.FC = () => {
     }
   });
 
-  const activeInfoHero = selectedHero;
+  // Set of all unavailable heroes (banned or picked on either team)
+  const unavailableHeroIds = useMemo(() => {
+    const set = new Set<string | number>();
+    [...bluePicks, ...redPicks, ...blueBans, ...redBans].forEach((h) => {
+      if (h) {
+        set.add(h.id);
+        set.add(String(h.id));
+        if (h.slug) set.add(h.slug);
+      }
+    });
+    return set;
+  }, [bluePicks, redPicks, blueBans, redBans]);
+
+  // Compute top recommended counter & synergy hero IDs for the active lane
+  const { topCounterHeroIds, topSynergyHeroIds } = useMemo(() => {
+    const isPickSlot = activeSlot?.type === 'PICK';
+    const activeTeam = activeSlot?.team || 'BLUE';
+    const activeIndex = activeSlot?.index ?? -1;
+
+    const laneConfig =
+      isPickSlot && activeIndex >= 0 && activeIndex < DEDICATED_LANES.length
+        ? DEDICATED_LANES[activeIndex]
+        : null;
+    const targetLane = laneConfig?.lane;
+
+    const enemyPicks = (activeTeam === 'BLUE' ? redPicks : bluePicks).filter(
+      Boolean
+    ) as Hero[];
+    const allyPicks = (activeTeam === 'BLUE' ? bluePicks : redPicks).filter(
+      Boolean
+    ) as Hero[];
+
+    const counterScored: { id: string | number; score: number }[] = [];
+    const synergyScored: { id: string | number; score: number }[] = [];
+
+    ALL_HEROES.forEach((h) => {
+      if (unavailableHeroIds.has(h.id) || (h.slug && unavailableHeroIds.has(h.slug))) return;
+
+      let cScore = 0;
+      enemyPicks.forEach((enemy) => {
+        const isCounter =
+          (enemy.counteredBy || []).some(
+            (rel: HeroRelationItem) => String(rel.id) === String(h.id) || rel.slug === h.slug
+          ) ||
+          (h.counters || []).some(
+            (rel: HeroRelationItem) => String(rel.id) === String(enemy.id) || rel.slug === enemy.slug
+          );
+        if (isCounter) cScore += 15;
+      });
+      if (targetLane) {
+        const matchesLane =
+          (h.lanes && h.lanes.some((l) => String(l).toUpperCase() === targetLane)) ||
+          h.lane.toUpperCase().includes(targetLane);
+        if (matchesLane) cScore += 20;
+      }
+      if (cScore > 0) counterScored.push({ id: h.id, score: cScore });
+
+      let sScore = 0;
+      allyPicks.forEach((ally) => {
+        const isSynergy =
+          (ally.synergies || []).some(
+            (rel: HeroRelationItem) => String(rel.id) === String(h.id) || rel.slug === h.slug
+          ) ||
+          (h.synergies || []).some(
+            (rel: HeroRelationItem) => String(rel.id) === String(ally.id) || rel.slug === ally.slug
+          );
+        if (isSynergy) sScore += 15;
+      });
+      if (targetLane) {
+        const matchesLane =
+          (h.lanes && h.lanes.some((l) => String(l).toUpperCase() === targetLane)) ||
+          h.lane.toUpperCase().includes(targetLane);
+        if (matchesLane) sScore += 20;
+      }
+      if (sScore > 0) synergyScored.push({ id: h.id, score: sScore });
+    });
+
+    counterScored.sort((a, b) => b.score - a.score);
+    synergyScored.sort((a, b) => b.score - a.score);
+
+    return {
+      topCounterHeroIds: new Set(counterScored.slice(0, 3).map((c) => String(c.id))),
+      topSynergyHeroIds: new Set(synergyScored.slice(0, 3).map((s) => String(s.id))),
+    };
+  }, [activeSlot, bluePicks, redPicks, unavailableHeroIds]);
 
   return (
     <section className="flex flex-col h-full min-h-0 rounded-none bg-transparent gap-1.5 p-0">
@@ -334,6 +419,9 @@ export const HeroGrid: React.FC = () => {
               redPicks.some((p) => p?.id === hero.id);
 
             const isSelected = selectedHero?.id === hero.id;
+            const isInspected = inspectedHero?.id === hero.id;
+            const isCounterRec = topCounterHeroIds.has(String(hero.id));
+            const isSynergyRec = topSynergyHeroIds.has(String(hero.id));
             const disabled = isBanned || isPicked;
 
             return (
@@ -356,7 +444,18 @@ export const HeroGrid: React.FC = () => {
                   setDraggedHero(null);
                   setDraggedSlot(null);
                 }}
-                onClick={() => placeHero(hero)}
+                onClick={() => {
+                  if (disabled) return;
+                  if (!activeSlot) {
+                    setInspectedHero(hero);
+                  } else {
+                    placeHero(hero);
+                  }
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setInspectedHero(hero);
+                }}
                 className={`group relative flex flex-col items-center p-0.5 text-center transition-all duration-150 focus:outline-none ${
                   disabled ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'
                 }`}
@@ -364,8 +463,14 @@ export const HeroGrid: React.FC = () => {
                 {/* Circular Hero Avatar */}
                 <div
                   className={`relative aspect-square w-full max-w-[60px] sm:max-w-[68px] overflow-hidden rounded-full border transition-all duration-150 ${
-                    isSelected
+                    isInspected
+                      ? 'border-amber-400 ring-2 ring-amber-400/80 shadow-[0_0_8px_rgba(251,191,36,0.6)] scale-105 z-20'
+                      : isSelected
                       ? 'border-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.4)] scale-105 z-10'
+                      : isCounterRec && !disabled
+                      ? 'border-red-500/80 ring-1 ring-red-500/50 shadow-[0_0_6px_rgba(239,68,68,0.3)] bg-slate-900/60 hover:scale-105'
+                      : isSynergyRec && !disabled
+                      ? 'border-cyan-400/80 ring-1 ring-cyan-400/50 shadow-[0_0_6px_rgba(34,211,238,0.3)] bg-slate-900/60 hover:scale-105'
                       : disabled
                       ? 'border-slate-900/60 opacity-30 brightness-75 cursor-not-allowed'
                       : 'border-slate-700/70 bg-slate-900/60 hover:border-amber-400/80 hover:scale-105 hover:shadow-[0_0_6px_rgba(234,179,8,0.25)]'
@@ -378,6 +483,20 @@ export const HeroGrid: React.FC = () => {
                     className={disabled ? '' : 'group-hover:scale-110 transition-transform duration-200'}
                   />
 
+                  {/* Recommendation Dot Badges for Top Counter & Synergy */}
+                  {isCounterRec && !disabled && (
+                    <span
+                      className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.9)] ring-1 ring-white/80 pointer-events-none z-20"
+                      title="Counter Recommendation for active lane"
+                    />
+                  )}
+                  {isSynergyRec && !isCounterRec && !disabled && (
+                    <span
+                      className="absolute top-1 right-1 h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.9)] ring-1 ring-white/80 pointer-events-none z-20"
+                      title="Synergy Recommendation for active lane"
+                    />
+                  )}
+
                   {/* Disabled Status Overlay (Identical subtle darkened mask for both picked and banned) */}
                   {disabled && (
                     <div className="absolute inset-0 rounded-full bg-black/65 backdrop-blur-[0.5px] pointer-events-none" />
@@ -388,10 +507,16 @@ export const HeroGrid: React.FC = () => {
                 <div className="mt-0.5 w-full text-center px-0.5">
                   <div
                     className={`truncate text-[9px] sm:text-[9.5px] font-semibold tracking-normal transition-colors ${
-                      isSelected
+                      isInspected
+                        ? 'text-amber-300 font-bold'
+                        : isSelected
                         ? 'text-amber-300 font-bold'
                         : disabled
                         ? 'text-slate-500/70'
+                        : isCounterRec
+                        ? 'text-red-300 font-bold'
+                        : isSynergyRec
+                        ? 'text-cyan-300 font-bold'
                         : 'text-[#8ea5c8] group-hover:text-sky-200'
                     }`}
                   >
@@ -404,172 +529,8 @@ export const HeroGrid: React.FC = () => {
         </div>
       </div>
 
-      {/* Hero Intel Detail Drawer (Shown when a hero is clicked/selected) */}
-      {activeInfoHero && (
-        <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-700/80 bg-slate-950/90 backdrop-blur-md px-3 py-1.5 shadow-lg">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-amber-400/80 shadow-gold-glow">
-              <HeroAvatar hero={activeInfoHero} variant="icon" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-black tracking-wider text-amber-300 truncate">
-                  {activeInfoHero.name}
-                </span>
-                {activeInfoHero.roles.map((r) => (
-                  <span
-                    key={String(r)}
-                    className="rounded bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider text-amber-200"
-                  >
-                    {r}
-                  </span>
-                ))}
-                {(activeInfoHero.lanes || [activeInfoHero.lane]).map((l) => (
-                  <span
-                    key={String(l)}
-                    className="inline-flex items-center gap-1 rounded bg-sky-500/20 border border-sky-500/40 px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider text-sky-200"
-                  >
-                    <LaneIcon lane={l} className="h-3 w-3" />
-                    <span>{l}</span>
-                  </span>
-                ))}
-                {hasMapSynergies && doesHeroMatchList(activeInfoHero, mapConfig.synergyHeroIds) && (
-                  <span
-                    className={`flex items-center gap-1 rounded-full px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider ${mapTheme.tagBg} border shadow-sm`}
-                    title={`${activeInfoHero.name} has synergy on ${mapConfig.name}: ${mapConfig.tacticalTip}`}
-                  >
-                    <MapEffectIcon effect={mapTrait} className="h-2.5 w-2.5" />
-                    <span>{mapConfig.shortName} Synergy</span>
-                  </span>
-                )}
-              </div>
-              <div className="text-[9px] text-slate-400 truncate mt-0.5">
-                <span className="font-semibold text-slate-300">Specialty:</span> {activeInfoHero.specialty}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Counter & Synergy Badges */}
-          <div className="flex flex-wrap items-center gap-2 text-[9px]">
-            {activeInfoHero.counters && activeInfoHero.counters.length > 0 && (
-              <div className="flex items-center gap-1">
-                <span className="flex items-center gap-0.5 font-black uppercase tracking-wider text-emerald-400">
-                  <Swords className="h-2.5 w-2.5" />
-                  Counters:
-                </span>
-                <div className="flex items-center gap-1">
-                  {activeInfoHero.counters.slice(0, 3).map((rel) => {
-                    const targetHero = ALL_HEROES.find((h) => h.id === rel.id || h.slug === rel.slug);
-                    return (
-                      <button
-                        key={`counter-${rel.id}`}
-                        type="button"
-                        onClick={() => targetHero && placeHero(targetHero)}
-                        title={`Strong vs ${rel.name} — Click to assign`}
-                        className="flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-950/60 pr-1.5 pl-0.5 py-0.5 text-[8px] font-bold text-emerald-200 hover:border-emerald-400 transition cursor-pointer"
-                      >
-                        <img
-                          src={rel.avatar}
-                          alt={rel.name}
-                          className="h-3.5 w-3.5 rounded-full object-cover"
-                        />
-                        <span className="max-w-[50px] truncate">{rel.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {activeInfoHero.counteredBy && activeInfoHero.counteredBy.length > 0 && (
-              <div className="flex items-center gap-1">
-                <span className="flex items-center gap-0.5 font-black uppercase tracking-wider text-rose-400">
-                  <ShieldAlert className="h-2.5 w-2.5" />
-                  Weak vs:
-                </span>
-                <div className="flex items-center gap-1">
-                  {activeInfoHero.counteredBy.slice(0, 3).map((rel) => {
-                    const targetHero = ALL_HEROES.find((h) => h.id === rel.id || h.slug === rel.slug);
-                    return (
-                      <button
-                        key={`weak-${rel.id}`}
-                        type="button"
-                        onClick={() => targetHero && placeHero(targetHero)}
-                        title={`Countered by ${rel.name} — Click to assign`}
-                        className="flex items-center gap-1 rounded-full border border-rose-500/40 bg-rose-950/60 pr-1.5 pl-0.5 py-0.5 text-[8px] font-bold text-rose-200 hover:border-rose-400 transition cursor-pointer"
-                      >
-                        <img
-                          src={rel.avatar}
-                          alt={rel.name}
-                          className="h-3.5 w-3.5 rounded-full object-cover"
-                        />
-                        <span className="max-w-[50px] truncate">{rel.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Matchup Intel Popover */}
-            {(activeInfoHero.counterTips?.counters ||
-              activeInfoHero.counterTips?.counteredBy ||
-              (activeInfoHero.skills && activeInfoHero.skills.length > 0)) && (
-              <div className="relative group/intel">
-                <button
-                  type="button"
-                  className="flex items-center gap-1 rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-slate-300 hover:border-amber-400 hover:text-amber-300 transition cursor-pointer"
-                >
-                  <Info className="h-3 w-3 text-amber-400" />
-                  <span>Intel</span>
-                </button>
-                <div className="absolute bottom-full right-0 mb-2 w-80 rounded-xl border border-slate-700 bg-slate-950/95 p-3 shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover/intel:opacity-100 group-hover/intel:pointer-events-auto transition-all duration-150 z-50 text-left">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
-                    <span className="text-xs font-black text-amber-300">
-                      {activeInfoHero.name} Matchup Intel
-                    </span>
-                    {activeInfoHero.ratings && (
-                      <span className="text-[9px] font-bold text-slate-400">
-                        Diff: {activeInfoHero.ratings.difficulty}/100
-                      </span>
-                    )}
-                  </div>
-                  {activeInfoHero.counterTips?.counters && (
-                    <p className="text-[10px] leading-relaxed text-emerald-300/90 mb-1.5">
-                      <strong className="uppercase text-emerald-400">Strong Vs: </strong>
-                      {activeInfoHero.counterTips.counters}
-                    </p>
-                  )}
-                  {activeInfoHero.counterTips?.counteredBy && (
-                    <p className="text-[10px] leading-relaxed text-rose-300/90 mb-1.5">
-                      <strong className="uppercase text-rose-400">Countered By: </strong>
-                      {activeInfoHero.counterTips.counteredBy}
-                    </p>
-                  )}
-                  {activeInfoHero.skills && activeInfoHero.skills.length > 0 && (
-                    <div className="mt-2 pt-1.5 border-t border-slate-800/80">
-                      <span className="block text-[9px] font-black uppercase text-slate-400 mb-1">
-                        Skills:
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {activeInfoHero.skills.slice(0, 4).map((sk) => (
-                          <span
-                            key={sk.name}
-                            title={sk.description}
-                            className="rounded bg-slate-900 border border-slate-800 px-1.5 py-0.5 text-[9px] text-slate-200 font-semibold"
-                          >
-                            {sk.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Tactical Intel Strip (Mounted directly beneath the hero roster grid) */}
+      <TacticalIntelStrip />
 
       {/* Live Tactical Composition & Coach Panel */}
       <div className="shrink-0">

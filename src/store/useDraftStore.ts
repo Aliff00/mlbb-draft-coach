@@ -51,6 +51,8 @@ interface DraftState {
   // Active / Selected Slot on the Board
   activeSlot: ActiveBoardSlot | null;
   selectedHero: Hero | null;
+  inspectedHero: Hero | null;
+  setInspectedHero: (hero: Hero | null) => void;
   swapSource: { team: TeamSide; index: number } | null;
   draggedHero: Hero | null;
   draggedSlot: { type: 'PICK' | 'BAN'; team: TeamSide; index: number; hero: Hero | null } | null;
@@ -198,6 +200,8 @@ export const useDraftStore = create<DraftState>((set, get) => ({
 
   activeSlot: null,
   selectedHero: null,
+  inspectedHero: null,
+  setInspectedHero: (inspectedHero) => set({ inspectedHero }),
   swapSource: null,
   draggedHero: null,
   draggedSlot: null,
@@ -251,6 +255,7 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       activeSlot,
       freePracticeTarget: activeSlot,
       laneFilter: nextLane,
+      inspectedHero: null,
     });
   },
 
@@ -475,6 +480,7 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       activeSlot: null,
       freePracticeTarget: null,
       selectedHero: null,
+      inspectedHero: null,
       swapSource: null,
       laneFilter: 'ALL',
       searchQuery: '',
