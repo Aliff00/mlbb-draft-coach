@@ -3,10 +3,11 @@ import { HeroGrid } from './components/HeroGrid';
 import { OrientationOverlay } from './components/OrientationOverlay';
 import { TeamColumn } from './components/TeamColumn';
 import { TopBar } from './components/TopBar';
+import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { useDraftStore } from './store/useDraftStore';
 
 export const App: React.FC = () => {
-  const { setIsFullscreen } = useDraftStore();
+  const { setIsFullscreen, setUser, setAuthLoading, fetchDrafts } = useDraftStore();
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -19,6 +20,38 @@ export const App: React.FC = () => {
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
     };
   }, [setIsFullscreen]);
+
+  // Initialize Supabase Auth Session listener
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setAuthLoading(false);
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      setAuthLoading(false);
+      if (currentUser) {
+        fetchDrafts();
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      setAuthLoading(false);
+      if (currentUser) {
+        fetchDrafts();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [setUser, setAuthLoading, fetchDrafts]);
 
   return (
     <div

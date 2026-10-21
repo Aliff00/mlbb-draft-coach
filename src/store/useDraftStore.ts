@@ -1,5 +1,12 @@
 import { create } from 'zustand';
+import { User } from '@supabase/supabase-js';
 import heroesData from '../data/heroes.json';
+import {
+  deleteDraftById,
+  fetchUserDrafts,
+  insertDraft,
+  SavedDraft,
+} from '../lib/supabase';
 import {
   ActiveBoardSlot,
   DEDICATED_LANES,
@@ -88,6 +95,18 @@ interface DraftState {
   setTacticalFilter: (filter: TacticalFilterType) => void;
   setIsFullscreen: (isFullscreen: boolean) => void;
   toggleFullscreen: () => void;
+
+  // Supabase Auth & Cloud Draft Storage
+  user: User | null;
+  isAuthLoading: boolean;
+  savedDrafts: SavedDraft[];
+  isDraftsLoading: boolean;
+  setUser: (user: User | null) => void;
+  setAuthLoading: (isLoading: boolean) => void;
+  loadDraft: (draft: SavedDraft) => void;
+  fetchDrafts: () => Promise<void>;
+  saveCurrentDraft: (title: string, notes?: string) => Promise<SavedDraft>;
+  deleteDraft: (id: string) => Promise<void>;
 
   // Legacy compatibility handlers
   handleSlotClick: (type: 'BAN' | 'PICK', team: TeamSide, index: number) => void;
@@ -446,4 +465,68 @@ export const useDraftStore = create<DraftState>((set, get) => ({
   setTurnDuration: (turnDuration) => set({ turnDuration }),
   setStatus: (status) => set({ status }),
   setFreePracticeTarget: (freePracticeTarget) => get().setActiveSlot(freePracticeTarget),
+
+  // Supabase Auth & Cloud Draft Storage
+  user: null,
+  isAuthLoading: true,
+  savedDrafts: [],
+  isDraftsLoading: false,
+
+  setUser: (user) => set({ user }),
+  setAuthLoading: (isAuthLoading) => set({ isAuthLoading }),
+
+  loadDraft: (draft) => {
+    set({
+      bluePicks: draft.blue_picks,
+      blueBans: draft.blue_bans,
+      redPicks: draft.red_picks,
+      redBans: draft.red_bans,
+      mapTrait: (draft.map_trait as MapTraitType) || 'standard',
+      selectedMapEffect: (draft.map_trait as MapEffectType) || 'standard',
+      activeSlot: null,
+      selectedHero: null,
+    });
+  },
+
+  fetchDrafts: async () => {
+    const user = get().user;
+    if (!user) {
+      set({ savedDrafts: [] });
+      return;
+    }
+    set({ isDraftsLoading: true });
+    try {
+      const drafts = await fetchUserDrafts(user.id);
+      set({ savedDrafts: drafts });
+    } catch (err) {
+      console.error('fetchDrafts error:', err);
+    } finally {
+      set({ isDraftsLoading: false });
+    }
+  },
+
+  saveCurrentDraft: async (title, notes) => {
+    const state = get();
+    if (!state.user) {
+      throw new Error('Please sign in to save drafts permanently to the cloud.');
+    }
+    const payload = {
+      user_id: state.user.id,
+      title: title.trim() || 'MLBB Scrim Draft',
+      map_trait: state.mapTrait || 'standard',
+      blue_picks: state.bluePicks,
+      blue_bans: state.blueBans,
+      red_picks: state.redPicks,
+      red_bans: state.redBans,
+      notes: notes || '',
+    };
+    const saved = await insertDraft(payload);
+    set({ savedDrafts: [saved, ...state.savedDrafts] });
+    return saved;
+  },
+
+  deleteDraft: async (id) => {
+    await deleteDraftById(id);
+    set({ savedDrafts: get().savedDrafts.filter((d) => d.id !== id) });
+  },
 }));
