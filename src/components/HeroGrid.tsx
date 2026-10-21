@@ -44,7 +44,6 @@ const LANE_TABS: Array<{
 export const HeroGrid: React.FC = () => {
   const {
     activeSlot,
-    userTeamSide,
     mapTrait,
     blueBans,
     redBans,
@@ -127,16 +126,25 @@ export const HeroGrid: React.FC = () => {
   }, [bluePicks, redPicks, blueBans, redBans]);
 
   // Compute top recommended counter & synergy hero IDs for YOUR TEAM's active/empty lane
+  // Compute top recommended counter & synergy hero IDs for targeted active slot
   const { topCounterHeroIds, topSynergyHeroIds } = useMemo(() => {
-    const userTeamEnum = userTeamSide === 'blue' ? 'BLUE' : 'RED';
-    const userPicks = userTeamSide === 'blue' ? bluePicks : redPicks;
-    const opponentPicks = userTeamSide === 'blue' ? redPicks : bluePicks;
+    // Requires clicking or targeting a slot for recommendations to appear
+    if (!activeSlot || activeSlot.type !== 'PICK') {
+      return {
+        topCounterHeroIds: new Set<string>(),
+        topSynergyHeroIds: new Set<string>(),
+      };
+    }
 
-    const isUserPickSlot = activeSlot?.type === 'PICK' && activeSlot?.team === userTeamEnum;
-    const targetLane = isUserPickSlot ? DEDICATED_LANES[activeSlot.index]?.lane : null;
+    const targetTeam = activeSlot.team;
+    const targetTeamPicks = targetTeam === 'BLUE' ? bluePicks : redPicks;
+    const opposingTeamPicks = targetTeam === 'BLUE' ? redPicks : bluePicks;
 
-    const enemyPicks = opponentPicks.filter(Boolean) as Hero[];
-    const allyPicks = userPicks.filter(Boolean) as Hero[];
+    const targetLane = DEDICATED_LANES[activeSlot.index]?.lane;
+    const directOpponent = activeSlot.index >= 0 ? opposingTeamPicks[activeSlot.index] : null;
+
+    const enemyPicks = opposingTeamPicks.filter(Boolean) as Hero[];
+    const allyPicks = targetTeamPicks.filter(Boolean) as Hero[];
 
     const metaMap = new Map(metaHeroes.map((m) => [m.id, m]));
 
@@ -153,8 +161,14 @@ export const HeroGrid: React.FC = () => {
           (h.lanes && h.lanes.some((l) => l.toUpperCase() === targetLane.toUpperCase()));
 
         let cScore = 0;
+        let isDirectMatch = false;
+
         enemyPicks.forEach((enemy) => {
           const enemyMeta = metaMap.get(Number(enemy.id));
+          const isDirect =
+            directOpponent &&
+            (directOpponent.id === enemy.id || directOpponent.slug === enemy.slug);
+
           const matchInH = (h.best_counters || []).find(
             (b) => b.id === Number(enemy.id) || b.slug === enemy.slug
           );
@@ -162,12 +176,16 @@ export const HeroGrid: React.FC = () => {
             (b) => b.id === h.id || b.slug === h.slug
           );
           const delta = matchInH?.counter_score ?? matchInE?.counter_score;
-          if (delta && delta > 0) cScore += delta;
+          if (delta && delta > 0) {
+            cScore += delta;
+            if (isDirect) isDirectMatch = true;
+          }
         });
 
         // Only include if it actually counters an enemy pick
         if (cScore > 0) {
-          if (matchesLane) cScore += 25;
+          if (matchesLane) cScore += 35;
+          if (isDirectMatch) cScore += 65; // Direct lane matchup bonus
           counterScored.push({ id: h.id, score: cScore });
         }
       });
@@ -185,19 +203,22 @@ export const HeroGrid: React.FC = () => {
         let sScore = 0;
         allyPicks.forEach((ally) => {
           const allyMeta = metaMap.get(Number(ally.id));
-          const matchInH = (h.synergies || []).find(
-            (s) => s.id === Number(ally.id) || s.slug === ally.slug
+          const compatList = (h as any).most_compatible || h.synergies || [];
+          const allyCompatList = (allyMeta as any)?.most_compatible || allyMeta?.synergies || [];
+
+          const matchInH = compatList.find(
+            (s: any) => s.id === Number(ally.id) || s.hero_id === Number(ally.id) || s.slug === ally.slug
           );
-          const matchInA = (allyMeta?.synergies || []).find(
-            (s) => s.id === h.id || s.slug === h.slug
+          const matchInA = allyCompatList.find(
+            (s: any) => s.id === h.id || s.hero_id === h.id || s.slug === h.slug
           );
-          const delta = matchInH?.synergy_score ?? matchInA?.synergy_score;
+          const delta = matchInH?.compatibility_score ?? matchInH?.counter_score ?? matchInA?.compatibility_score;
           if (delta && delta > 0) sScore += delta;
         });
 
         // Only include if it actually synergizes with a friendly pick
         if (sScore > 0) {
-          if (matchesLane) sScore += 25;
+          if (matchesLane) sScore += 35;
           synergyScored.push({ id: h.id, score: sScore });
         }
       });
@@ -210,7 +231,7 @@ export const HeroGrid: React.FC = () => {
       topCounterHeroIds: new Set(counterScored.slice(0, 4).map((c) => String(c.id))),
       topSynergyHeroIds: new Set(synergyScored.slice(0, 3).map((s) => String(s.id))),
     };
-  }, [activeSlot, userTeamSide, bluePicks, redPicks, unavailableHeroIds]);
+  }, [activeSlot, bluePicks, redPicks, unavailableHeroIds]);
 
   return (
     <section className="flex flex-col h-full min-h-0 rounded-none bg-transparent gap-1.5 p-0">

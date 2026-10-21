@@ -15,6 +15,7 @@ import {
   Hero,
   HeroRelationItem,
   MAP_EFFECTS_CONFIG,
+  TeamSide,
 } from '../types/draft';
 import metaHeroes from '../data/mlbb-meta.json';
 import { HeroAvatar } from './HeroAvatar';
@@ -30,6 +31,7 @@ interface RecommendedChip {
   tooltip: string;
   targetHeroName?: string;
   winRate?: number;
+  isDirectLaneMatch?: boolean;
 }
 
 export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
@@ -50,10 +52,14 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
   } = useDraftStore();
 
   const mapConfig = MAP_EFFECTS_CONFIG[mapTrait];
-  const userTeamEnum = userTeamSide === 'blue' ? 'BLUE' : 'RED';
 
-  const userPicks = userTeamSide === 'blue' ? bluePicks : redPicks;
-  const opponentPicks = userTeamSide === 'blue' ? redPicks : bluePicks;
+  // Tactical Intel is dynamic to the selected slot's team!
+  // If active slot is Red team, Red is target and Blue is opponent.
+  // If active slot is Blue team, Blue is target and Red is opponent.
+  const targetTeam: TeamSide = activeSlot?.team ?? (userTeamSide === 'blue' ? 'BLUE' : 'RED');
+
+  const targetTeamPicks = targetTeam === 'BLUE' ? bluePicks : redPicks;
+  const opposingTeamPicks = targetTeam === 'BLUE' ? redPicks : bluePicks;
 
   // Set of all unavailable heroes (banned or picked on either team)
   const unavailableHeroIds = useMemo(() => {
@@ -69,43 +75,45 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
   }, [bluePicks, redPicks, blueBans, redBans]);
 
   // Locked heroes for both teams
-  const userLocked = useMemo(
-    () => userPicks.filter(Boolean) as Hero[],
-    [userPicks]
+  const targetLocked = useMemo(
+    () => targetTeamPicks.filter(Boolean) as Hero[],
+    [targetTeamPicks]
   );
-  const opponentLocked = useMemo(
-    () => opponentPicks.filter(Boolean) as Hero[],
-    [opponentPicks]
+  const opposingLocked = useMemo(
+    () => opposingTeamPicks.filter(Boolean) as Hero[],
+    [opposingTeamPicks]
   );
+
+  // Direct lane opponent (e.g. if target slot is EXP (index 0), opposingTeamPicks[0])
+  const directLaneOpponent = useMemo(() => {
+    if (activeSlot?.type === 'PICK' && activeSlot.index >= 0 && activeSlot.index < opposingTeamPicks.length) {
+      return opposingTeamPicks[activeSlot.index] || null;
+    }
+    return null;
+  }, [activeSlot, opposingTeamPicks]);
 
   // Determine active slot target on the board
   const activeSlotTarget = useMemo(() => {
     if (activeSlot?.type === 'PICK') {
       const laneConfig = DEDICATED_LANES[activeSlot.index] || DEDICATED_LANES[0];
-      const isYourTeam = activeSlot.team === userTeamEnum;
       return {
         hasActiveSlot: true,
         slotIndex: activeSlot.index,
         team: activeSlot.team,
         laneConfig,
         targetLane: laneConfig.lane,
-        label: isYourTeam
-          ? `YOUR ${laneConfig.shortLabel} PICK`
-          : `${activeSlot.team} ${laneConfig.shortLabel} PICK`,
+        label: `${activeSlot.team} ${laneConfig.shortLabel} PICK`,
       };
     }
 
     if (activeSlot?.type === 'BAN') {
-      const isYourTeam = activeSlot.team === userTeamEnum;
       return {
         hasActiveSlot: true,
         slotIndex: activeSlot.index,
         team: activeSlot.team,
         laneConfig: null,
         targetLane: null,
-        label: isYourTeam
-          ? `YOUR BAN #${activeSlot.index + 1}`
-          : `${activeSlot.team} BAN #${activeSlot.index + 1}`,
+        label: `${activeSlot.team} BAN #${activeSlot.index + 1}`,
       };
     }
 
@@ -115,9 +123,9 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
       team: null,
       laneConfig: null,
       targetLane: null,
-      label: 'NO SLOT SELECTED',
+      label: 'NO SLOT TARGETED',
     };
-  }, [activeSlot, userTeamEnum]);
+  }, [activeSlot]);
 
   // Fast ID / slug lookup maps for heroes & meta telemetry
   const { metaById, heroById } = useMemo(() => {
@@ -140,11 +148,11 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     const targetLane = activeSlotTarget.targetLane;
 
     // -------------------------------------------------------------
-    // 1. Calculate Top BEST COUNTERS vs Opponent Locked Heroes
+    // 1. Calculate Top BEST COUNTERS vs Opposing Team Locked Heroes
     // -------------------------------------------------------------
     const counterCandidates: RecommendedChip[] = [];
 
-    if (opponentLocked.length > 0) {
+    if (opposingLocked.length > 0) {
       metaHeroes.forEach((candidateMeta) => {
         if (
           unavailableHeroIds.has(candidateMeta.id) ||
@@ -167,10 +175,16 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
         let primaryTooltip = '';
         let matchedEnemyName = '';
         let matchCount = 0;
+        let isDirectLaneMatch = false;
+        let directLaneWr = 0;
+        let directLaneScore = 0;
 
-        opponentLocked.forEach((enemy) => {
+        opposingLocked.forEach((enemy) => {
           const enemyId = Number(enemy.id);
           const enemyMeta = metaById.get(enemyId);
+          const isDirectLaneOpponent =
+            directLaneOpponent &&
+            (directLaneOpponent.id === enemy.id || directLaneOpponent.slug === enemy.slug);
 
           const matchInCandidate = (candidateMeta.best_counters || []).find(
             (b) => b.id === enemyId || (b as any).hero_id === enemyId || b.slug === enemy.slug
@@ -183,18 +197,34 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
           if (matched) {
             matchCount++;
             const score = matched.counter_score || 85;
+            const wr = matched.win_rate ?? Math.round(candidateMeta.win_rate || 50);
+
+            if (isDirectLaneOpponent) {
+              isDirectLaneMatch = true;
+              directLaneWr = wr;
+              directLaneScore = score;
+            }
+
             if (score > bestScore) {
               bestScore = score;
               matchedEnemyName = enemy.name;
-              const wr = matched.win_rate ?? Math.round(candidateMeta.win_rate || 50);
-              primaryTooltip = `Counters ${enemy.name} (${wr}% Matchup WR)`;
+              primaryTooltip = `Counters ${enemy.name} (${wr}% WR)`;
             }
           }
         });
 
         if (matchCount > 0) {
           let totalRank = bestScore * 2 + matchCount * 12;
-          if (matchesLane) totalRank += 30;
+          if (matchesLane) totalRank += 35;
+
+          // Direct Lane Counter gets maximum priority boost and dedicated tooltip
+          if (isDirectLaneMatch && directLaneOpponent) {
+            totalRank += 65;
+            bestScore = directLaneScore;
+            primaryTooltip = `Direct Lane Counter vs ${directLaneOpponent.name} (${directLaneWr}% WR)`;
+            matchedEnemyName = directLaneOpponent.name;
+          }
+
           if (
             mapConfig.synergyHeroIds.includes(String(candidateMeta.id)) ||
             (candidateMeta.slug && mapConfig.synergyHeroIds.includes(candidateMeta.slug))
@@ -208,6 +238,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
             score: totalRank,
             badgeScore: bestScore || 88,
             targetHeroName: matchedEnemyName,
+            isDirectLaneMatch,
             tooltip: primaryTooltip || `Counters ${matchedEnemyName || 'Enemy'}`,
           });
         }
@@ -218,12 +249,12 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     const counters = counterCandidates.slice(0, 4);
 
     // -------------------------------------------------------------
-    // 2. Calculate Top COMPATIBLE with Friendly Locked Heroes
+    // 2. Calculate Top COMPATIBLE with Target Team Locked Heroes
     // -------------------------------------------------------------
     const compatCandidates: RecommendedChip[] = [];
     const usedCounterIds = new Set(counters.map((c) => String(c.hero.id)));
 
-    if (userLocked.length > 0) {
+    if (targetLocked.length > 0) {
       metaHeroes.forEach((candidateMeta) => {
         if (
           unavailableHeroIds.has(candidateMeta.id) ||
@@ -248,7 +279,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
         let matchedAllyName = '';
         let matchCount = 0;
 
-        userLocked.forEach((ally) => {
+        targetLocked.forEach((ally) => {
           const allyId = Number(ally.id);
           const allyMeta = metaById.get(allyId);
 
@@ -270,14 +301,14 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
               bestScore = score;
               matchedAllyName = ally.name;
               const wr = matched.win_rate ?? Math.round(candidateMeta.win_rate || 50);
-              primaryTooltip = `Compatible with ${ally.name} (${wr}% Matchup WR)`;
+              primaryTooltip = `Compatible with ${ally.name} (${wr}% WR)`;
             }
           }
         });
 
         if (matchCount > 0) {
           let totalRank = bestScore * 2 + matchCount * 12;
-          if (matchesLane) totalRank += 30;
+          if (matchesLane) totalRank += 35;
           if (
             mapConfig.synergyHeroIds.includes(String(candidateMeta.id)) ||
             (candidateMeta.slug && mapConfig.synergyHeroIds.includes(candidateMeta.slug))
@@ -308,16 +339,17 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     activeSlotTarget.hasActiveSlot,
     activeSlotTarget.targetLane,
     unavailableHeroIds,
-    opponentLocked,
-    userLocked,
+    opposingLocked,
+    targetLocked,
+    directLaneOpponent,
     mapConfig,
     metaById,
     heroById,
   ]);
 
-  // Compute YOUR TEAM Composition Health & Damage Balance
+  // Compute Target Team Composition Health & Damage Balance
   const teamBalanceMetric = useMemo(() => {
-    if (userLocked.length === 0) {
+    if (targetLocked.length === 0) {
       return {
         physPct: 50,
         magPct: 50,
@@ -330,7 +362,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     let hasFrontline = false;
     let hasCC = false;
 
-    userLocked.forEach((hero) => {
+    targetLocked.forEach((hero) => {
       const type = getHeroDamageType(hero);
       if (type === 'PHYSICAL') physicalScore += 1;
       else if (type === 'MAGIC') magicScore += 1;
@@ -361,13 +393,13 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     const magPct = 100 - physPct;
 
     let warning: string | null = null;
-    if (physPct >= 90 && userLocked.length >= 2) {
+    if (physPct >= 90 && targetLocked.length >= 2) {
       warning = '90%+ Phys';
-    } else if (magPct >= 90 && userLocked.length >= 2) {
+    } else if (magPct >= 90 && targetLocked.length >= 2) {
       warning = '90%+ Mag';
-    } else if (userLocked.length >= 3 && !hasFrontline) {
+    } else if (targetLocked.length >= 3 && !hasFrontline) {
       warning = 'No Frontline';
-    } else if (userLocked.length >= 3 && !hasCC) {
+    } else if (targetLocked.length >= 3 && !hasCC) {
       warning = 'Low CC';
     }
 
@@ -376,7 +408,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
       magPct,
       warning,
     };
-  }, [userLocked]);
+  }, [targetLocked]);
 
   // Helper to resolve HeroRelationItem to full Hero
   const resolveRelationHero = (rel: HeroRelationItem | any): Hero | null => {
@@ -393,7 +425,6 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
   // Click-to-Draft Flow: Immediately place suggested hero into active lane slot
   const handleHeroChipClick = (hero: Hero) => {
     if (!activeSlot || activeSlot.type !== 'PICK') {
-      // If no active slot, inspecting this hero
       setInspectedHero(hero);
       return;
     }
@@ -593,32 +624,59 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
             )}
           </div>
         </div>
+      ) : !activeSlotTarget.hasActiveSlot ? (
+        /* ========================================================= */
+        /* RESTING STATE: PROMPT USER TO CLICK / TARGET A SLOT       */
+        /* ========================================================= */
+        <div className="flex items-center justify-between w-full py-0.5 animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-hud font-bold uppercase tracking-wider bg-slate-900/90 border border-slate-700/80 text-slate-400 shadow-sm">
+              <Target className="h-3 w-3 text-slate-400 flex-shrink-0" />
+              <span>TARGET A LANE SLOT</span>
+            </div>
+            <span className="text-[11px] text-slate-400 font-medium italic">
+              Click any slot on Blue or Red team to analyze lane counters and compatible picks.
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900/90 border border-slate-800 text-[10px] sm:text-[11px] font-hud text-slate-400 shadow-sm">
+            <BarChart2 className="h-3 w-3 text-slate-500 flex-shrink-0" />
+            <span>COMP: STANDBY</span>
+          </div>
+        </div>
       ) : (
         /* ========================================================= */
-        /* STATE 1: UNIFIED DRAFT INTELLIGENCE & RECOMMENDATIONS     */
+        /* STATE 1: ACTIVE LANE DRAFT INTELLIGENCE & MATCHUPS        */
         /* ========================================================= */
         <div className="flex flex-col gap-1.5 w-full animate-fadeIn">
           {/* Top Sub-Row: Slot Target Indicator (Left) & Comp Balance (Right) */}
           <div className="flex items-center justify-between w-full">
-            {/* Left: Slot Target Indicator Badge */}
-            <div
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-hud font-bold uppercase tracking-wider shadow-sm border ${
-                !activeSlotTarget.hasActiveSlot
-                  ? 'bg-slate-900/80 border-slate-700/80 text-slate-400'
-                  : activeSlotTarget.team === 'BLUE'
-                  ? 'bg-blue-950/80 border-blue-500/60 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.25)]'
-                  : 'bg-rose-950/80 border-rose-500/60 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.25)]'
-              }`}
-            >
-              <Target className={`h-3 w-3 flex-shrink-0 ${!activeSlotTarget.hasActiveSlot ? 'text-slate-500' : ''}`} />
-              <span>{activeSlotTarget.label}</span>
+            {/* Left: Slot Target Indicator Badge with Direct Opponent Tag */}
+            <div className="flex items-center gap-2">
+              <div
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-hud font-bold uppercase tracking-wider shadow-sm border ${
+                  targetTeam === 'BLUE'
+                    ? 'bg-blue-950/80 border-blue-500/60 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.25)]'
+                    : 'bg-rose-950/80 border-rose-500/60 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.25)]'
+                }`}
+              >
+                <Target className="h-3 w-3 flex-shrink-0" />
+                <span>{activeSlotTarget.label}</span>
+              </div>
+
+              {directLaneOpponent && (
+                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700/80 text-[10px] font-hud text-slate-300 shadow-sm">
+                  <span className="text-slate-500">VS LANE OPPONENT:</span>
+                  <span className="font-bold text-amber-300">{directLaneOpponent.name}</span>
+                </span>
+              )}
             </div>
 
             {/* Right: Comp Balance Metric */}
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900/90 border border-slate-800 text-[10px] sm:text-[11px] font-hud shadow-sm">
               <span className="text-amber-400 font-bold flex items-center gap-1">
                 <BarChart2 className="h-3 w-3 text-amber-400 flex-shrink-0" />
-                <span>COMP:</span>
+                <span>{targetTeam} COMP:</span>
               </span>
               <span className="font-semibold text-slate-200">
                 {teamBalanceMetric.physPct}% Phys / {teamBalanceMetric.magPct}% Mag
@@ -645,7 +703,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
               </span>
 
               <div className="flex items-center gap-2 flex-shrink-0">
-                {topCounters.map(({ hero, badgeScore, tooltip }) => (
+                {topCounters.map(({ hero, badgeScore, tooltip, isDirectLaneMatch }) => (
                   <button
                     key={`rec-counter-${hero.id}`}
                     type="button"
@@ -653,20 +711,30 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                     className="relative group h-7.5 w-7.5 sm:h-8 sm:w-8 rounded-full overflow-visible flex-shrink-0 transition-transform duration-150 hover:scale-110 active:scale-95 cursor-pointer"
                     title={`${hero.name} — ${tooltip} (Click to draft into ${activeSlotTarget.label})`}
                   >
-                    <div className="h-full w-full rounded-full overflow-hidden border border-emerald-500/70 hover:border-emerald-400 bg-slate-900 shadow-sm ring-1 ring-emerald-500/25">
+                    <div
+                      className={`h-full w-full rounded-full overflow-hidden border bg-slate-900 shadow-sm ${
+                        isDirectLaneMatch
+                          ? 'border-amber-400 ring-2 ring-amber-400/70 shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                          : 'border-emerald-500/70 hover:border-emerald-400 ring-1 ring-emerald-500/25'
+                      }`}
+                    >
                       <HeroAvatar hero={hero} variant="icon" />
                       <div className="absolute inset-0 rounded-full bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                     </div>
-                    <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-emerald-950/95 text-emerald-300 border border-emerald-500/80 rounded-full text-[8.5px] font-hud font-bold leading-none shadow z-10">
+                    <span
+                      className={`absolute -bottom-1 -right-1 px-1 py-0.2 rounded-full text-[8.5px] font-hud font-bold leading-none shadow z-10 border ${
+                        isDirectLaneMatch
+                          ? 'bg-amber-950/95 text-amber-300 border-amber-400'
+                          : 'bg-emerald-950/95 text-emerald-300 border-emerald-500/80'
+                      }`}
+                    >
                       {badgeScore}
                     </span>
                   </button>
                 ))}
                 {topCounters.length === 0 && (
                   <span className="text-slate-500 text-[10px] italic">
-                    {!activeSlotTarget.hasActiveSlot
-                      ? 'Select a slot to view recommendations'
-                      : 'Awaiting enemy picks'}
+                    {opposingLocked.length === 0 ? 'Awaiting opponent picks' : 'No direct counters found'}
                   </span>
                 )}
               </div>
@@ -699,9 +767,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                 ))}
                 {topCompatible.length === 0 && (
                   <span className="text-slate-500 text-[10px] italic">
-                    {!activeSlotTarget.hasActiveSlot
-                      ? 'Select a slot to view recommendations'
-                      : 'Awaiting ally picks'}
+                    {targetLocked.length === 0 ? 'Awaiting team picks' : 'No synergies found'}
                   </span>
                 )}
               </div>
