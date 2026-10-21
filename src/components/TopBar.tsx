@@ -47,7 +47,7 @@ export const TopBar: React.FC = () => {
     setActiveSlot,
     clearSlot,
     swapSides,
-    swapBanSlots,
+    moveOrSwapSlot,
     resetBoard,
     setMapTrait,
     isFullscreen,
@@ -141,15 +141,13 @@ export const TopBar: React.FC = () => {
             heroToPlace = draggedHero;
           }
 
-          // Case 1: Swapping within the team bans
-          if (sourceSlot && sourceSlot.type === 'BAN' && sourceSlot.team === team && sourceSlot.index !== slotIdx) {
-            swapBanSlots(team, sourceSlot.index, slotIdx);
-            setDraggedHero(null);
-            setDraggedSlot(null);
+          // Case 1: Dragged from an existing slot on the board (swap or move between bans/picks/teams)
+          if (sourceSlot && (sourceSlot.type === 'BAN' || sourceSlot.type === 'PICK')) {
+            moveOrSwapSlot(sourceSlot, { type: 'BAN', team, index: slotIdx });
             return;
           }
 
-          // Case 2: Dropping hero to ban (from Hero Grid or moved from another slot)
+          // Case 2: Dropping brand new hero from Hero Grid to ban
           if (heroToPlace) {
             placeHero(heroToPlace, { type: 'BAN', team, index: slotIdx });
             setDraggedHero(null);

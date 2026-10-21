@@ -84,6 +84,10 @@ interface DraftState {
   clearSlot: (type: 'PICK' | 'BAN', team: TeamSide, index: number) => void;
   swapSlots: (team: TeamSide, indexA: number, indexB: number) => void;
   swapBanSlots: (team: TeamSide, indexA: number, indexB: number) => void;
+  moveOrSwapSlot: (
+    source: { type: 'PICK' | 'BAN'; team: TeamSide; index: number },
+    target: { type: 'PICK' | 'BAN'; team: TeamSide; index: number }
+  ) => void;
   swapSides: () => void;
   resetBoard: () => void;
 
@@ -389,6 +393,59 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       nextRedBans[indexB] = temp;
       set({ redBans: nextRedBans });
     }
+  },
+
+  moveOrSwapSlot: (source, target) => {
+    if (
+      source.type === target.type &&
+      source.team === target.team &&
+      source.index === target.index
+    ) {
+      return;
+    }
+
+    const state = get();
+    const nextBluePicks = [...state.bluePicks];
+    const nextRedPicks = [...state.redPicks];
+    const nextBlueBans = [...state.blueBans];
+    const nextRedBans = [...state.redBans];
+
+    const getList = (type: 'PICK' | 'BAN', team: TeamSide) => {
+      if (type === 'PICK') {
+        return team === 'BLUE' ? nextBluePicks : nextRedPicks;
+      }
+      return team === 'BLUE' ? nextBlueBans : nextRedBans;
+    };
+
+    const sourceList = getList(source.type, source.team);
+    const targetList = getList(target.type, target.team);
+
+    const sourceHero = sourceList[source.index];
+    const targetHero = targetList[target.index];
+
+    // Move source hero to target slot, and if target had a hero, swap it into source slot (otherwise source becomes empty)
+    targetList[target.index] = sourceHero;
+    sourceList[source.index] = targetHero;
+
+    // Check if the board is completely filled
+    const isDraftComplete =
+      nextBluePicks.every(Boolean) &&
+      nextRedPicks.every(Boolean) &&
+      nextBlueBans.every(Boolean) &&
+      nextRedBans.every(Boolean);
+
+    set({
+      bluePicks: nextBluePicks,
+      redPicks: nextRedPicks,
+      blueBans: nextBlueBans,
+      redBans: nextRedBans,
+      selectedHero: sourceHero || targetHero || state.selectedHero,
+      activeSlot: isDraftComplete ? null : state.activeSlot,
+      freePracticeTarget: isDraftComplete ? null : state.freePracticeTarget,
+      swapSource: null,
+      draggedHero: null,
+      draggedSlot: null,
+    });
   },
 
   swapSides: () => {

@@ -18,7 +18,7 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
     activeSlot,
     setActiveSlot,
     clearSlot,
-    swapSlots,
+    moveOrSwapSlot,
     placeHero,
     draggedHero,
     draggedSlot,
@@ -104,15 +104,13 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
                 heroToPlace = draggedHero;
               }
 
-              // Case 1: Swapping within the same team pick slots
-              if (sourceSlot && sourceSlot.type === 'PICK' && sourceSlot.team === team && sourceSlot.index !== idx) {
-                swapSlots(team, sourceSlot.index, idx);
-                setDraggedHero(null);
-                setDraggedSlot(null);
+              // Case 1: Dragged from an existing slot on the board (same team, opponent team, or ban)
+              if (sourceSlot && (sourceSlot.type === 'PICK' || sourceSlot.type === 'BAN')) {
+                moveOrSwapSlot(sourceSlot, { type: 'PICK', team, index: idx });
                 return;
               }
 
-              // Case 2: Dropping hero (from Grid or moved from another slot)
+              // Case 2: Dropping brand new hero from Hero Grid
               if (heroToPlace) {
                 placeHero(heroToPlace, { type: 'PICK', team, index: idx });
                 setDraggedHero(null);
