@@ -52,6 +52,10 @@ interface DraftState {
   activeSlot: ActiveBoardSlot | null;
   selectedHero: Hero | null;
   swapSource: { team: TeamSide; index: number } | null;
+  draggedHero: Hero | null;
+  draggedSlot: { type: 'PICK' | 'BAN'; team: TeamSide; index: number; hero: Hero | null } | null;
+  setDraggedHero: (hero: Hero | null) => void;
+  setDraggedSlot: (slot: { type: 'PICK' | 'BAN'; team: TeamSide; index: number; hero: Hero | null } | null) => void;
 
   // Filter & UI state
   roleFilter: 'ALL' | HeroRole;
@@ -191,6 +195,10 @@ export const useDraftStore = create<DraftState>((set, get) => ({
   activeSlot: null,
   selectedHero: null,
   swapSource: null,
+  draggedHero: null,
+  draggedSlot: null,
+  setDraggedHero: (draggedHero) => set({ draggedHero }),
+  setDraggedSlot: (draggedSlot) => set({ draggedSlot }),
 
   roleFilter: 'ALL',
   laneFilter: 'ALL',

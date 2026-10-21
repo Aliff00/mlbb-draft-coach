@@ -1,74 +1,30 @@
 import React from 'react';
-import { Hero } from '../types/draft';
 
 /**
- * Creates and applies a sleek, compact circular drag preview token for heroes.
+ * Applies a sleek, compact circular drag preview for heroes.
  *
- * Replaces the clumsy, oversized default drag snapshot with a polished 48x48
- * circular avatar framed in glowing amber with a drop shadow, centered directly
- * on the cursor (24px, 24px) so destination slots (lanes, bans) are clearly visible.
+ * Uses the already-rendered circular avatar element inside the dragged item so that
+ * the browser's native drag engine captures a real, painted element that persists in
+ * the DOM for the duration of the drag.
+ *
+ * Centers the cursor directly in the middle of the circular avatar so destination slots
+ * (lanes, bans) are 100% visible and easy to drop onto.
  */
-export function setCustomHeroDragImage(e: React.DragEvent, hero: Hero) {
+export function setCustomHeroDragImage(e: React.DragEvent, targetElement?: HTMLElement | null) {
   if (!e.dataTransfer || !e.dataTransfer.setDragImage) return;
 
-  const size = 48; // 48px circle
-  const center = size / 2;
-
-  const ghost = document.createElement('div');
-  ghost.style.position = 'fixed';
-  ghost.style.top = '0px';
-  ghost.style.left = '0px';
-  ghost.style.zIndex = '-9999';
-  ghost.style.width = `${size}px`;
-  ghost.style.height = `${size}px`;
-  ghost.style.borderRadius = '9999px';
-  ghost.style.overflow = 'hidden';
-  ghost.style.border = '2px solid #f59e0b'; // amber-500 ring
-  ghost.style.boxShadow = '0 0 14px rgba(245, 158, 11, 0.75), 0 4px 10px rgba(0, 0, 0, 0.8)';
-  ghost.style.backgroundColor = '#020617';
-  ghost.style.pointerEvents = 'none';
-  ghost.style.display = 'flex';
-  ghost.style.alignItems = 'center';
-  ghost.style.justifyContent = 'center';
-
-  const imgSrc = hero.avatar || hero.image || hero.banner;
-
-  if (imgSrc) {
-    const img = document.createElement('img');
-    img.src = imgSrc;
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.objectFit = 'cover';
-    img.style.borderRadius = '9999px';
-    img.style.display = 'block';
-    ghost.appendChild(img);
-  } else {
-    const initials = (hero.name || '')
-      .split(/\s+/)
-      .map((part) => part[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-    const span = document.createElement('span');
-    span.innerText = initials || '★';
-    span.style.color = '#fde68a';
-    span.style.fontWeight = 'bold';
-    span.style.fontSize = '14px';
-    span.style.fontFamily = 'sans-serif';
-    ghost.appendChild(span);
-  }
-
-  document.body.appendChild(ghost);
-
   try {
-    e.dataTransfer.setDragImage(ghost, center, center);
+    const el = targetElement || (e.currentTarget as HTMLElement);
+    if (!el) return;
+
+    // Search for the circular avatar container within the dragged element
+    const circle = (el.querySelector('.rounded-full') as HTMLElement) || el;
+    const rect = circle.getBoundingClientRect();
+    const halfWidth = rect.width > 0 ? rect.width / 2 : 24;
+    const halfHeight = rect.height > 0 ? rect.height / 2 : 24;
+
+    e.dataTransfer.setDragImage(circle, halfWidth, halfHeight);
   } catch (err) {
     console.warn('Custom drag preview unavailable:', err);
   }
-
-  // Cleanup ghost element after drag initiation
-  setTimeout(() => {
-    ghost.remove();
-  }, 100);
 }
-

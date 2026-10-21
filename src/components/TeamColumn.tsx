@@ -20,6 +20,10 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
     clearSlot,
     swapSlots,
     placeHero,
+    draggedHero,
+    draggedSlot,
+    setDraggedHero,
+    setDraggedSlot,
   } = useDraftStore();
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -45,13 +49,19 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
             draggable={Boolean(hero)}
             onDragStart={(e) => {
               setDraggedIndex(idx);
+              setDraggedHero(hero);
+              setDraggedSlot({ type: 'PICK', team, index: idx, hero });
               const payload = JSON.stringify({ type: 'PICK', team, index: idx, hero });
               e.dataTransfer.setData('application/json', payload);
               e.dataTransfer.setData('text/plain', payload);
               e.dataTransfer.effectAllowed = 'copyMove';
-              if (hero) {
-                setCustomHeroDragImage(e, hero);
-              }
+              setCustomHeroDragImage(e);
+            }}
+            onDragEnd={() => {
+              setDraggedIndex(null);
+              setDragOverIndex(null);
+              setDraggedHero(null);
+              setDraggedSlot(null);
             }}
             onDragOver={(e) => {
               e.preventDefault();
@@ -69,32 +79,45 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
               e.preventDefault();
               setDraggedIndex(null);
               setDragOverIndex(null);
+
+              let heroToPlace: typeof hero = null;
+              let sourceSlot: typeof draggedSlot = draggedSlot;
+
               try {
                 const raw =
                   e.dataTransfer.getData('application/json') ||
                   e.dataTransfer.getData('text/plain');
-                if (!raw) return;
-                const data = JSON.parse(raw);
-
-                // Case 1: Dropped hero from Hero Grid
-                if (data.type === 'HERO' && data.hero) {
-                  placeHero(data.hero, { type: 'PICK', team, index: idx });
-                  return;
-                }
-
-                // Case 2: Swapping within the same team pick slots
-                if (data.type === 'PICK' && data.team === team && data.index !== idx) {
-                  swapSlots(team, data.index, idx);
-                  return;
-                }
-
-                // Case 3: Moved pick from another slot
-                if (data.type === 'PICK' && data.hero) {
-                  placeHero(data.hero, { type: 'PICK', team, index: idx });
-                  return;
+                if (raw) {
+                  const data = JSON.parse(raw);
+                  if (data.type === 'HERO' && data.hero) {
+                    heroToPlace = data.hero;
+                  } else if (data.type === 'PICK' || data.type === 'BAN') {
+                    sourceSlot = data;
+                    heroToPlace = data.hero;
+                  }
                 }
               } catch (err) {
-                console.error('Pick slot drop error:', err);
+                console.warn('Drag dataTransfer parsing fallback to store', err);
+              }
+
+              if (!heroToPlace && draggedHero) {
+                heroToPlace = draggedHero;
+              }
+
+              // Case 1: Swapping within the same team pick slots
+              if (sourceSlot && sourceSlot.type === 'PICK' && sourceSlot.team === team && sourceSlot.index !== idx) {
+                swapSlots(team, sourceSlot.index, idx);
+                setDraggedHero(null);
+                setDraggedSlot(null);
+                return;
+              }
+
+              // Case 2: Dropping hero (from Grid or moved from another slot)
+              if (heroToPlace) {
+                placeHero(heroToPlace, { type: 'PICK', team, index: idx });
+                setDraggedHero(null);
+                setDraggedSlot(null);
+                return;
               }
             }}
             onClick={() => {

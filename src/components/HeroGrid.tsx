@@ -58,6 +58,8 @@ export const HeroGrid: React.FC = () => {
     setRoleFilter,
     setLaneFilter,
     setSearchQuery,
+    setDraggedHero,
+    setDraggedSlot,
   } = useDraftStore();
 
   const [sortOrder, setSortOrder] = useState<HeroSortOrder>('RELEASE_ASC');
@@ -342,11 +344,17 @@ export const HeroGrid: React.FC = () => {
                 draggable={!disabled}
                 onDragStart={(e) => {
                   if (disabled) return;
+                  setDraggedHero(hero);
+                  setDraggedSlot(null);
                   const payload = JSON.stringify({ type: 'HERO', hero });
                   e.dataTransfer.setData('application/json', payload);
                   e.dataTransfer.setData('text/plain', payload);
                   e.dataTransfer.effectAllowed = 'copyMove';
-                  setCustomHeroDragImage(e, hero);
+                  setCustomHeroDragImage(e);
+                }}
+                onDragEnd={() => {
+                  setDraggedHero(null);
+                  setDraggedSlot(null);
                 }}
                 onClick={() => placeHero(hero)}
                 className={`group relative flex flex-col items-center p-0.5 text-center transition-all duration-150 focus:outline-none ${

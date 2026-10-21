@@ -55,6 +55,10 @@ export const TopBar: React.FC = () => {
     user,
     savedDrafts,
     placeHero,
+    draggedHero,
+    draggedSlot,
+    setDraggedHero,
+    setDraggedSlot,
   } = useDraftStore();
 
   const [dragOverBan, setDragOverBan] = useState<string | null>(null);
@@ -84,13 +88,18 @@ export const TopBar: React.FC = () => {
         key={`${team}-ban-${slotIdx}`}
         draggable={Boolean(hero)}
         onDragStart={(e) => {
+          setDraggedSlot({ type: 'BAN', team, index: slotIdx, hero });
+          setDraggedHero(hero);
           const payload = JSON.stringify({ type: 'BAN', team, index: slotIdx, hero });
           e.dataTransfer.setData('application/json', payload);
           e.dataTransfer.setData('text/plain', payload);
           e.dataTransfer.effectAllowed = 'copyMove';
-          if (hero) {
-            setCustomHeroDragImage(e, hero);
-          }
+          setCustomHeroDragImage(e);
+        }}
+        onDragEnd={() => {
+          setDragOverBan(null);
+          setDraggedHero(null);
+          setDraggedSlot(null);
         }}
         onDragOver={(e) => {
           e.preventDefault();
@@ -107,32 +116,45 @@ export const TopBar: React.FC = () => {
         onDrop={(e) => {
           e.preventDefault();
           setDragOverBan(null);
+
+          let heroToPlace: typeof hero = null;
+          let sourceSlot: typeof draggedSlot = draggedSlot;
+
           try {
             const raw =
               e.dataTransfer.getData('application/json') ||
               e.dataTransfer.getData('text/plain');
-            if (!raw) return;
-            const data = JSON.parse(raw);
-
-            // Case 1: Hero dragged from Hero Grid -> Ban hero
-            if (data.type === 'HERO' && data.hero) {
-              placeHero(data.hero, { type: 'BAN', team, index: slotIdx });
-              return;
-            }
-
-            // Case 2: Swapping within the team bans
-            if (data.type === 'BAN' && data.team === team && data.index !== slotIdx) {
-              swapBanSlots(team, data.index, slotIdx);
-              return;
-            }
-
-            // Case 3: Moved ban from another slot
-            if (data.type === 'BAN' && data.hero) {
-              placeHero(data.hero, { type: 'BAN', team, index: slotIdx });
-              return;
+            if (raw) {
+              const data = JSON.parse(raw);
+              if (data.type === 'HERO' && data.hero) {
+                heroToPlace = data.hero;
+              } else if (data.type === 'PICK' || data.type === 'BAN') {
+                sourceSlot = data;
+                heroToPlace = data.hero;
+              }
             }
           } catch (err) {
-            console.error('Ban slot drop error:', err);
+            console.warn('Ban drop dataTransfer parsing fallback to store', err);
+          }
+
+          if (!heroToPlace && draggedHero) {
+            heroToPlace = draggedHero;
+          }
+
+          // Case 1: Swapping within the team bans
+          if (sourceSlot && sourceSlot.type === 'BAN' && sourceSlot.team === team && sourceSlot.index !== slotIdx) {
+            swapBanSlots(team, sourceSlot.index, slotIdx);
+            setDraggedHero(null);
+            setDraggedSlot(null);
+            return;
+          }
+
+          // Case 2: Dropping hero to ban (from Hero Grid or moved from another slot)
+          if (heroToPlace) {
+            placeHero(heroToPlace, { type: 'BAN', team, index: slotIdx });
+            setDraggedHero(null);
+            setDraggedSlot(null);
+            return;
           }
         }}
         onClick={() => setActiveSlot({ type: 'BAN', team, index: slotIdx })}
