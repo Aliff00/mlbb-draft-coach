@@ -24,8 +24,6 @@ export const DEDICATED_LANES: TacticalLaneConfig[] = [
   { index: 4, lane: 'GOLD', label: 'Gold Lane', roleName: 'Gold Laner', shortLabel: 'GOLD' },
 ];
 
-export const FREE_PRACTICE_SLOT_LANES = DEDICATED_LANES;
-
 export interface ActiveBoardSlot {
   type: 'PICK' | 'BAN';
   team: TeamSide;
@@ -109,69 +107,6 @@ export const MAP_EFFECTS_CONFIG: Record<MapTraitType, MapEffectConfig> = {
   },
 };
 
-export type SeasonMechanicId = 'healing_turtle' | 'golden_turret' | 'revealing_wisps';
-
-export interface SeasonMechanicConfig {
-  id: SeasonMechanicId;
-  name: string;
-  shortName: string;
-  badgeLabel: string;
-  description: string;
-  tacticalTip: string;
-}
-
-export const SEASON_42_MECHANICS: SeasonMechanicConfig[] = [
-  {
-    id: 'healing_turtle',
-    name: 'Healing Turtle',
-    shortName: 'Healing Turtle',
-    badgeLabel: 'HEALING TURTLE',
-    description: 'Team HP/sustain burst on securing Turtle.',
-    tacticalTip: 'Prioritize early level 4 skirmishers and teamfight objective control.',
-  },
-  {
-    id: 'golden_turret',
-    name: 'Golden Turret',
-    shortName: 'Golden Turret',
-    badgeLabel: 'GOLDEN TURRET',
-    description: 'Enhanced early outer turret plating & gold swing.',
-    tacticalTip: 'Prioritize early lane bullies and fast tower push marksmen.',
-  },
-  {
-    id: 'revealing_wisps',
-    name: 'Revealing Wisps',
-    shortName: 'Revealing Wisps',
-    badgeLabel: 'REVEALING WISPS',
-    description: 'Vision scouting spirits around key jungle chokepoints.',
-    tacticalTip: "Stealth/flankers need to play around wisps' vision cones.",
-  },
-];
-
-// Heroes favored by Objective Contests & Vision mechanics
-export const OBJECTIVE_VISION_HERO_IDS: string[] = [
-  'martis',
-  'baxia',
-  'fredrinn',
-  'barats',
-  'terizla',
-  'yu-zhong',
-  'thamuz',
-  'akai',
-  'novaria',
-  'popol-and-kupa',
-  'selena',
-  'mathilda',
-  'hilda',
-  'natalia',
-  'diggie',
-  'beatrix',
-  'claude',
-];
-
-export type TacticalFilterType = 'ALL' | 'MAP_SYNERGY' | 'OBJECTIVE_VISION';
-
-export type TurnDurationOption = 15 | 30 | 60;
-
 export type ActionType = 'BAN' | 'PICK';
 
 export interface HeroRelationItem {
@@ -248,29 +183,6 @@ export function doesHeroMatchList(hero: Hero, list: string[]): boolean {
     const target = item.toLowerCase();
     return target === idStr || (slugStr && target === slugStr);
   });
-}
-
-export interface DraftStep {
-  index: number;
-  team: TeamSide;
-  action: ActionType;
-  slotIndex: number; // 0 to (banCount - 1) for BAN, 0 to 4 for PICK
-  phaseLabel: string;
-  subLabel: string;
-  /** True during Ranked blind ban phase where Blue & Red can ban the same hero */
-  allowCrossTeamDuplicate?: boolean;
-  /** Simultaneous turn group ID (used to group double-picks or blind bans visually) */
-  turnGroup: number;
-}
-
-export interface DraftSnapshot {
-  currentStepIndex: number;
-  blueBans: (Hero | null)[];
-  redBans: (Hero | null)[];
-  bluePicks: (Hero | null)[];
-  redPicks: (Hero | null)[];
-  selectedHero: Hero | null;
-  targetSlot?: { type: 'BAN' | 'PICK'; team: TeamSide; index: number } | null;
 }
 
 const KNOWN_MAGIC_HERO_SLUGS = new Set([

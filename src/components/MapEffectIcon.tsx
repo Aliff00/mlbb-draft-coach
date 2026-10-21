@@ -2,14 +2,11 @@ import React, { useState } from 'react';
 import {
   BrickWall,
   Cloud,
-  Coins,
-  Eye,
-  HeartPulse,
   MapPin,
   Trees,
   Waves,
 } from 'lucide-react';
-import { MapEffectType, SeasonMechanicId } from '../types/draft';
+import { MapEffectType } from '../types/draft';
 
 interface MapTraitIconProps {
   effect: MapEffectType | string;
@@ -82,22 +79,6 @@ export const MapTraitIcon: React.FC<MapTraitIconProps> = ({
 
 // Backwards compatibility alias
 export const MapEffectIcon = MapTraitIcon;
-
-export const SeasonMechanicIcon: React.FC<{
-  mechanic: SeasonMechanicId;
-  className?: string;
-}> = ({ mechanic, className = 'h-3.5 w-3.5' }) => {
-  switch (mechanic) {
-    case 'healing_turtle':
-      return <HeartPulse className={className} />;
-    case 'golden_turret':
-      return <Coins className={className} />;
-    case 'revealing_wisps':
-      return <Eye className={className} />;
-    default:
-      return null;
-  }
-};
 
 export const getMapEffectColorTheme = (effect: MapEffectType) => {
   switch (effect) {

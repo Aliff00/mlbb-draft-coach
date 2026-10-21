@@ -76,7 +76,7 @@ export const App: React.FC = () => {
     <div
       className="relative flex flex-col h-screen w-screen overflow-hidden bg-[#03060f] text-slate-100 select-none bg-cover bg-center bg-no-repeat border-0 rounded-none"
       style={{
-        backgroundImage: "url('/arena-bg.jpg'), url('/images/arena-bg.jpg')",
+        backgroundImage: "url('/arena-bg.jpg')",
       }}
     >
       {/* Semi-transparent dark overlay so hero avatars, bans, and indicators pop with high contrast */}

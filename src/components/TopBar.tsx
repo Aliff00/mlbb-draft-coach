@@ -321,9 +321,6 @@ export const TopBar: React.FC = () => {
                     src="/icon.png"
                     alt="MLBB"
                     className="h-3.5 w-3.5 rounded-full object-cover shadow-sm"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/images/icon.png';
-                    }}
                   />
                   <span className="font-hud font-bold uppercase tracking-wider text-[11px] sm:text-xs text-amber-400 group-hover:text-amber-300">
                     MLBB DRAFT COACH

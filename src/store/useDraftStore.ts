@@ -11,16 +11,12 @@ import {
   ActiveBoardSlot,
   DEDICATED_LANES,
   DraftMode,
-  DraftSnapshot,
-  DraftStep,
   Hero,
   HeroRole,
   LaneRole,
   MapEffectType,
   MapTraitType,
-  TacticalFilterType,
   TeamSide,
-  TurnDurationOption,
 } from '../types/draft';
 
 const createEmptySlots = (count: number): (Hero | null)[] =>
@@ -30,12 +26,8 @@ export const ALL_HEROES: Hero[] = (heroesData as Hero[])
   .slice()
   .sort((a, b) => Number(a.id) - Number(b.id));
 
-export type DraftStatus = 'idle' | 'drafting';
-
 interface DraftState {
   // Board status & Team identities
-  status: DraftStatus;
-  isDraftStarted: boolean;
   mode: DraftMode;
   mapTrait: MapTraitType;
   selectedMapEffect: MapEffectType;
@@ -66,21 +58,7 @@ interface DraftState {
   laneFilter: 'ALL' | LaneRole;
   searchQuery: string;
   mapSynergyOnly: boolean;
-  tacticalFilter: TacticalFilterType;
   isFullscreen: boolean;
-
-  // Legacy compatibility fields
-  freePracticeTarget: ActiveBoardSlot | null;
-  sequence: DraftStep[];
-  currentStepIndex: number;
-  history: DraftSnapshot[];
-  timeLeft: number;
-  isPaused: boolean;
-  isInfiniteTime: boolean;
-  rankedSubMode: 'RANKED_EPIC' | 'RANKED_LEGEND' | 'RANKED_MYTHIC';
-  activeMechanics: string[];
-  firstPickSide: TeamSide;
-  turnDuration: TurnDurationOption;
 
   // Board Actions
   setActiveSlot: (slot: ActiveBoardSlot | null) => void;
@@ -103,8 +81,6 @@ interface DraftState {
   setRoleFilter: (role: 'ALL' | HeroRole) => void;
   setLaneFilter: (lane: 'ALL' | LaneRole) => void;
   setSearchQuery: (query: string) => void;
-  setMapSynergyOnly: (active: boolean) => void;
-  setTacticalFilter: (filter: TacticalFilterType) => void;
   setIsFullscreen: (isFullscreen: boolean) => void;
   toggleFullscreen: () => void;
 
@@ -119,28 +95,6 @@ interface DraftState {
   fetchDrafts: () => Promise<void>;
   saveCurrentDraft: (title: string, notes?: string) => Promise<SavedDraft>;
   deleteDraft: (id: string) => Promise<void>;
-
-  // Legacy compatibility handlers
-  handleSlotClick: (type: 'BAN' | 'PICK', team: TeamSide, index: number) => void;
-  handleSwapClick: (team: TeamSide, index: number) => void;
-  selectHero: (hero: Hero) => void;
-  confirmAction: () => void;
-  skipBan: () => void;
-  undoLastAction: () => void;
-  resetDraft: () => void;
-  startDraft: () => void;
-  returnToLobby: () => void;
-  tickTimer: () => void;
-  togglePause: () => void;
-  resetTurnTimer: () => void;
-  toggleInfiniteTime: () => void;
-  setMode: (mode: DraftMode) => void;
-  setRankedSubMode: (subMode: 'RANKED_EPIC' | 'RANKED_LEGEND' | 'RANKED_MYTHIC') => void;
-  toggleMechanic: (id: string) => void;
-  setFirstPickSide: (side: TeamSide) => void;
-  setTurnDuration: (duration: TurnDurationOption) => void;
-  setStatus: (status: DraftStatus) => void;
-  setFreePracticeTarget: (target: ActiveBoardSlot | null) => void;
 }
 
 export function checkHeroAvailability(
@@ -148,25 +102,24 @@ export function checkHeroAvailability(
   arg2?: any,
   arg3?: any,
   arg4?: any,
-  arg5?: any,
-  arg6?: any
+  arg5?: any
 ): { disabled: boolean; reason?: 'BANNED' | 'PICKED' } {
   let blueBans: (Hero | null)[] = [];
   let redBans: (Hero | null)[] = [];
   let bluePicks: (Hero | null)[] = [];
   let redPicks: (Hero | null)[] = [];
 
-  if (Array.isArray(arg2)) {
+  if (Array.isArray(arg2) && Array.isArray(arg3) && Array.isArray(arg4) && Array.isArray(arg5)) {
     blueBans = arg2;
-    redBans = arg3 || [];
-    bluePicks = arg4 || [];
-    redPicks = arg5 || [];
+    redBans = arg3;
+    bluePicks = arg4;
+    redPicks = arg5;
   } else {
-    // legacy: (hero, currentStep, blueBans, redBans, bluePicks, redPicks)
-    blueBans = arg3 || [];
-    redBans = arg4 || [];
-    bluePicks = arg5 || [];
-    redPicks = arg6 || [];
+    const state = useDraftStore.getState();
+    blueBans = state.blueBans;
+    redBans = state.redBans;
+    bluePicks = state.bluePicks;
+    redPicks = state.redPicks;
   }
 
   const isBanned =
@@ -187,8 +140,6 @@ export function checkHeroAvailability(
 }
 
 export const useDraftStore = create<DraftState>((set, get) => ({
-  status: 'drafting',
-  isDraftStarted: true,
   mode: 'FREE_PRACTICE',
   mapTrait: 'standard',
   selectedMapEffect: 'standard',
@@ -216,25 +167,11 @@ export const useDraftStore = create<DraftState>((set, get) => ({
   laneFilter: 'ALL',
   searchQuery: '',
   mapSynergyOnly: false,
-  tacticalFilter: 'ALL',
   isFullscreen: false,
-
-  // Legacy fields
-  freePracticeTarget: null,
-  sequence: [],
-  currentStepIndex: 0,
-  history: [],
-  timeLeft: 0,
-  isPaused: false,
-  isInfiniteTime: true,
-  rankedSubMode: 'RANKED_MYTHIC',
-  activeMechanics: [],
-  firstPickSide: 'BLUE',
-  turnDuration: 30,
 
   setActiveSlot: (activeSlot) => {
     if (!activeSlot) {
-      set({ activeSlot: null, freePracticeTarget: null, selectedHero: null });
+      set({ activeSlot: null, selectedHero: null });
       return;
     }
 
@@ -246,7 +183,7 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       current.index === activeSlot.index
     ) {
       // Toggle unselect when clicking the currently active target slot again
-      set({ activeSlot: null, freePracticeTarget: null, selectedHero: null });
+      set({ activeSlot: null, selectedHero: null });
       return;
     }
 
@@ -262,7 +199,6 @@ export const useDraftStore = create<DraftState>((set, get) => ({
 
     set({
       activeSlot,
-      freePracticeTarget: activeSlot,
       laneFilter: nextLane,
       inspectedHero: null,
       selectedHero: slotHero || null,
@@ -273,8 +209,6 @@ export const useDraftStore = create<DraftState>((set, get) => ({
     const state = get();
     const target = targetSlot || state.activeSlot;
 
-    // If no slot is selected or targeted on the board:
-    // Simply select this hero for matchup and tactical intel without overwriting Player 1 or any slot!
     if (!target) {
       set({ selectedHero: hero });
       return;
@@ -300,15 +234,12 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       }
     }
 
-    // Check if the entire board (all 10 picks and all 10 bans) is completely filled
     const isDraftComplete =
       nextBluePicks.every(Boolean) &&
       nextRedPicks.every(Boolean) &&
       nextBlueBans.every(Boolean) &&
       nextRedBans.every(Boolean);
 
-    // If placed via drag-and-drop (targetSlot passed), do not change activeSlot.
-    // If the entire draft is full, clear activeSlot so no accidental clicks overwrite players.
     const nextActiveSlot = targetSlot
       ? state.activeSlot
       : isDraftComplete
@@ -322,14 +253,11 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       redBans: nextRedBans,
       selectedHero: null,
       activeSlot: nextActiveSlot,
-      freePracticeTarget: nextActiveSlot,
     });
   },
 
   clearSlot: (type, team, index) => {
     const state = get();
-    // Do not auto-target the cleared slot.
-    // If the cleared slot was the one selected, unselect it (null); otherwise preserve previous selection.
     const isClearingActive =
       state.activeSlot?.type === type &&
       state.activeSlot?.team === team &&
@@ -344,7 +272,6 @@ export const useDraftStore = create<DraftState>((set, get) => ({
         set({
           bluePicks: nextBluePicks,
           activeSlot: nextActive,
-          freePracticeTarget: nextActive,
           selectedHero: null,
         });
       } else {
@@ -353,7 +280,6 @@ export const useDraftStore = create<DraftState>((set, get) => ({
         set({
           redPicks: nextRedPicks,
           activeSlot: nextActive,
-          freePracticeTarget: nextActive,
           selectedHero: null,
         });
       }
@@ -364,7 +290,6 @@ export const useDraftStore = create<DraftState>((set, get) => ({
         set({
           blueBans: nextBlueBans,
           activeSlot: nextActive,
-          freePracticeTarget: nextActive,
           selectedHero: null,
         });
       } else {
@@ -373,7 +298,6 @@ export const useDraftStore = create<DraftState>((set, get) => ({
         set({
           redBans: nextRedBans,
           activeSlot: nextActive,
-          freePracticeTarget: nextActive,
           selectedHero: null,
         });
       }
@@ -382,71 +306,81 @@ export const useDraftStore = create<DraftState>((set, get) => ({
 
   swapSlots: (team, indexA, indexB) => {
     const state = get();
+    if (indexA === indexB) return;
+
     if (team === 'BLUE') {
-      const nextBluePicks = [...state.bluePicks];
-      const temp = nextBluePicks[indexA];
-      nextBluePicks[indexA] = nextBluePicks[indexB];
-      nextBluePicks[indexB] = temp;
-      set({ bluePicks: nextBluePicks, swapSource: null });
+      const next = [...state.bluePicks];
+      const temp = next[indexA];
+      next[indexA] = next[indexB];
+      next[indexB] = temp;
+      set({ bluePicks: next, swapSource: null });
     } else {
-      const nextRedPicks = [...state.redPicks];
-      const temp = nextRedPicks[indexA];
-      nextRedPicks[indexA] = nextRedPicks[indexB];
-      nextRedPicks[indexB] = temp;
-      set({ redPicks: nextRedPicks, swapSource: null });
+      const next = [...state.redPicks];
+      const temp = next[indexA];
+      next[indexA] = next[indexB];
+      next[indexB] = temp;
+      set({ redPicks: next, swapSource: null });
     }
   },
 
   swapBanSlots: (team, indexA, indexB) => {
     const state = get();
+    if (indexA === indexB) return;
+
     if (team === 'BLUE') {
-      const nextBlueBans = [...state.blueBans];
-      const temp = nextBlueBans[indexA];
-      nextBlueBans[indexA] = nextBlueBans[indexB];
-      nextBlueBans[indexB] = temp;
-      set({ blueBans: nextBlueBans });
+      const next = [...state.blueBans];
+      const temp = next[indexA];
+      next[indexA] = next[indexB];
+      next[indexB] = temp;
+      set({ blueBans: next, swapSource: null });
     } else {
-      const nextRedBans = [...state.redBans];
-      const temp = nextRedBans[indexA];
-      nextRedBans[indexA] = nextRedBans[indexB];
-      nextRedBans[indexB] = temp;
-      set({ redBans: nextRedBans });
+      const next = [...state.redBans];
+      const temp = next[indexA];
+      next[indexA] = next[indexB];
+      next[indexB] = temp;
+      set({ redBans: next, swapSource: null });
     }
   },
 
   moveOrSwapSlot: (source, target) => {
-    if (
-      source.type === target.type &&
-      source.team === target.team &&
-      source.index === target.index
-    ) {
+    const state = get();
+
+    if (source.type === target.type && source.team === target.team && source.index === target.index) {
+      set({ draggedHero: null, draggedSlot: null });
       return;
     }
 
-    const state = get();
     const nextBluePicks = [...state.bluePicks];
     const nextRedPicks = [...state.redPicks];
     const nextBlueBans = [...state.blueBans];
     const nextRedBans = [...state.redBans];
 
-    const getList = (type: 'PICK' | 'BAN', team: TeamSide) => {
-      if (type === 'PICK') {
-        return team === 'BLUE' ? nextBluePicks : nextRedPicks;
+    const getSlotHero = (slot: { type: 'PICK' | 'BAN'; team: TeamSide; index: number }) => {
+      if (slot.type === 'PICK') {
+        return slot.team === 'BLUE' ? nextBluePicks[slot.index] : nextRedPicks[slot.index];
       }
-      return team === 'BLUE' ? nextBlueBans : nextRedBans;
+      return slot.team === 'BLUE' ? nextBlueBans[slot.index] : nextRedBans[slot.index];
     };
 
-    const sourceList = getList(source.type, source.team);
-    const targetList = getList(target.type, target.team);
+    const setSlotHero = (
+      slot: { type: 'PICK' | 'BAN'; team: TeamSide; index: number },
+      hero: Hero | null
+    ) => {
+      if (slot.type === 'PICK') {
+        if (slot.team === 'BLUE') nextBluePicks[slot.index] = hero;
+        else nextRedPicks[slot.index] = hero;
+      } else {
+        if (slot.team === 'BLUE') nextBlueBans[slot.index] = hero;
+        else nextRedBans[slot.index] = hero;
+      }
+    };
 
-    const sourceHero = sourceList[source.index];
-    const targetHero = targetList[target.index];
+    const sourceHero = getSlotHero(source);
+    const targetHero = getSlotHero(target);
 
-    // Move source hero to target slot, and if target had a hero, swap it into source slot (otherwise source becomes empty)
-    targetList[target.index] = sourceHero;
-    sourceList[source.index] = targetHero;
+    setSlotHero(source, targetHero);
+    setSlotHero(target, sourceHero);
 
-    // Check if the board is completely filled
     const isDraftComplete =
       nextBluePicks.every(Boolean) &&
       nextRedPicks.every(Boolean) &&
@@ -460,7 +394,6 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       redBans: nextRedBans,
       selectedHero: sourceHero || targetHero || state.selectedHero,
       activeSlot: isDraftComplete ? null : state.activeSlot,
-      freePracticeTarget: isDraftComplete ? null : state.freePracticeTarget,
       swapSource: null,
       draggedHero: null,
       draggedSlot: null,
@@ -489,13 +422,11 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       blueBans: createEmptySlots(5),
       redBans: createEmptySlots(5),
       activeSlot: null,
-      freePracticeTarget: null,
       selectedHero: null,
       inspectedHero: null,
       swapSource: null,
       laneFilter: 'ALL',
       searchQuery: '',
-      tacticalFilter: 'ALL',
     });
   },
 
@@ -506,8 +437,6 @@ export const useDraftStore = create<DraftState>((set, get) => ({
   setRoleFilter: (roleFilter) => set({ roleFilter }),
   setLaneFilter: (laneFilter) => set({ laneFilter }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
-  setMapSynergyOnly: (mapSynergyOnly) => set({ mapSynergyOnly }),
-  setTacticalFilter: (tacticalFilter) => set({ tacticalFilter }),
   setIsFullscreen: (isFullscreen) => set({ isFullscreen }),
   toggleFullscreen: () => {
     if (typeof document === 'undefined') return;
@@ -519,50 +448,6 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       set({ isFullscreen: false });
     }
   },
-
-  // Legacy handlers for compatibility
-  handleSlotClick: (type, team, index) => {
-    get().setActiveSlot({ type, team, index });
-  },
-
-  handleSwapClick: (team, index) => {
-    const state = get();
-    if (!state.swapSource) {
-      set({ swapSource: { team, index } });
-      return;
-    }
-    if (state.swapSource.team !== team) {
-      set({ swapSource: { team, index } });
-      return;
-    }
-    if (state.swapSource.index === index) {
-      set({ swapSource: null });
-      return;
-    }
-    state.swapSlots(team, state.swapSource.index, index);
-  },
-
-  selectHero: (hero) => {
-    get().placeHero(hero);
-  },
-
-  confirmAction: () => {},
-  skipBan: () => {},
-  undoLastAction: () => {},
-  resetDraft: () => get().resetBoard(),
-  startDraft: () => get().resetBoard(),
-  returnToLobby: () => get().resetBoard(),
-  tickTimer: () => {},
-  togglePause: () => {},
-  resetTurnTimer: () => {},
-  toggleInfiniteTime: () => {},
-  setMode: (mode) => set({ mode }),
-  setRankedSubMode: (rankedSubMode) => set({ rankedSubMode }),
-  toggleMechanic: () => {},
-  setFirstPickSide: (firstPickSide) => set({ firstPickSide }),
-  setTurnDuration: (turnDuration) => set({ turnDuration }),
-  setStatus: (status) => set({ status }),
-  setFreePracticeTarget: (freePracticeTarget) => get().setActiveSlot(freePracticeTarget),
 
   // Supabase Auth & Cloud Draft Storage
   user: null,
