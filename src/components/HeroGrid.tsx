@@ -121,7 +121,7 @@ export const HeroGrid: React.FC = () => {
             <Search className="h-3.5 w-3.5" />
           </button>
 
-          {/* Extended Full-Width Lanes (Seamless, Sharp, Neutral) */}
+          {/* Extended Full-Width Lanes (Seamless, Sharp, Subtle White Bottom-to-Top Gradient) */}
           <div className="flex-1 flex items-stretch gap-0 w-full min-w-0 border border-slate-800/80 bg-slate-950/70 divide-x divide-slate-800/80 rounded-none overflow-hidden">
             {LANE_TABS.map((tab) => {
               const active = laneFilter === tab.id;
@@ -130,15 +130,15 @@ export const HeroGrid: React.FC = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setLaneFilter(tab.id)}
-                  className={`flex-1 min-w-0 h-7 sm:h-7.5 inline-flex items-center justify-center gap-1 sm:gap-1.5 rounded-none px-1 font-hud font-bold text-[9px] sm:text-[9.5px] uppercase tracking-wider transition-colors cursor-pointer whitespace-nowrap ${
+                  className={`flex-1 min-w-0 h-7 sm:h-7.5 inline-flex items-center justify-center gap-1 sm:gap-1.5 rounded-none px-1 font-hud font-bold text-[9px] sm:text-[9.5px] uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
                     active
-                      ? 'bg-slate-200 text-slate-950 font-black'
-                      : 'bg-transparent text-slate-400 hover:bg-slate-900/80 hover:text-slate-200'
+                      ? 'bg-gradient-to-t from-white/20 via-white/5 to-transparent text-white font-black shadow-[inset_0_-2px_0_rgba(255,255,255,0.75)]'
+                      : 'bg-transparent text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
                   }`}
                 >
                   <LaneIcon
                     lane={tab.lane}
-                    className={`h-3.5 w-3.5 shrink-0 ${active ? 'text-slate-950' : ''}`}
+                    className={`h-3.5 w-3.5 shrink-0 ${active ? 'text-white' : 'text-slate-400'}`}
                   />
                   <span className="truncate">{tab.label}</span>
                 </button>
