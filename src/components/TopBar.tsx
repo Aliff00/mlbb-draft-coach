@@ -188,6 +188,20 @@ export const TopBar: React.FC = () => {
       />
 
       <header className="relative z-20 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md px-3 sm:px-6 lg:px-8 py-2 shadow-xl">
+        {/* Top-Rightmost Fullscreen Toggle: tiny, no container, pure icon */}
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className="absolute right-2 top-2 sm:right-3 sm:top-2 text-slate-500 hover:text-slate-200 transition-colors cursor-pointer p-0.5 z-40"
+          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+        >
+          {isFullscreen ? (
+            <Minimize2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          ) : (
+            <Maximize2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          )}
+        </button>
+
         <div className="grid grid-cols-12 items-center gap-2">
           {/* Left: Blue Team 5 Quick Ban Chips */}
           <div className="col-span-12 sm:col-span-3 flex items-center justify-start relative">
@@ -296,26 +310,12 @@ export const TopBar: React.FC = () => {
             </button>
           </div>
 
-          {/* Right: Red Team 5 Quick Ban Chips + Universal Top-Right Fullscreen */}
-          <div className="col-span-12 sm:col-span-3 flex items-center justify-end gap-2 sm:gap-2.5 relative">
+          {/* Right: Red Team 5 Quick Ban Chips */}
+          <div className="col-span-12 sm:col-span-3 flex items-center justify-end relative">
             <div className="absolute -right-2 inset-y-0 w-28 bg-rose-600/15 blur-xl pointer-events-none rounded-full" />
-            <div className="relative z-10 flex items-center gap-1.5">
+            <div className="relative z-10 flex items-center gap-1.5 pr-4 sm:pr-5">
               {[0, 1, 2, 3, 4].map((idx) => renderBanChip('RED', idx))}
             </div>
-
-            {/* Universal Top-Right Fullscreen Toggle */}
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className="relative z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/90 text-slate-300 hover:text-white hover:border-slate-500 transition cursor-pointer shadow-sm shrink-0 ml-1"
-              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-            >
-              {isFullscreen ? (
-                <Minimize2 className="h-3.5 w-3.5" />
-              ) : (
-                <Maximize2 className="h-3.5 w-3.5" />
-              )}
-            </button>
           </div>
         </div>
       </header>
