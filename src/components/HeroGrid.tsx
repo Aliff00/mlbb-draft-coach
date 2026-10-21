@@ -13,15 +13,14 @@ import {
   DEDICATED_LANES,
   doesHeroMatchList,
   Hero,
-  HeroRelationItem,
   LaneRole,
   MAP_EFFECTS_CONFIG,
 } from '../types/draft';
 import { HeroAvatar } from './HeroAvatar';
 import { LaneIcon } from './LaneIcon';
-import { TacticalCoachPanel } from './TacticalCoachPanel';
 import { TacticalIntelStrip } from './TacticalIntelStrip';
 import { setCustomHeroDragImage } from '../utils/dragGhost';
+import metaHeroes from '../data/mlbb-meta.json';
 
 export type HeroSortOrder =
   | 'RELEASE_ASC'
@@ -141,48 +140,48 @@ export const HeroGrid: React.FC = () => {
     const enemyPicks = opponentPicks.filter(Boolean) as Hero[];
     const allyPicks = userPicks.filter(Boolean) as Hero[];
 
+    const metaMap = new Map(metaHeroes.map((m) => [m.id, m]));
+
     const counterScored: { id: string | number; score: number }[] = [];
     const synergyScored: { id: string | number; score: number }[] = [];
 
-    ALL_HEROES.forEach((h) => {
+    metaHeroes.forEach((h) => {
       if (unavailableHeroIds.has(h.id) || (h.slug && unavailableHeroIds.has(h.slug))) return;
+
+      const matchesLane =
+        !targetLane ||
+        (h.lanes && h.lanes.some((l) => l.toUpperCase() === targetLane.toUpperCase()));
 
       let cScore = 0;
       enemyPicks.forEach((enemy) => {
-        const isCounter =
-          (enemy.counteredBy || []).some(
-            (rel: HeroRelationItem) => String(rel.id) === String(h.id) || rel.slug === h.slug
-          ) ||
-          (h.counters || []).some(
-            (rel: HeroRelationItem) => String(rel.id) === String(enemy.id) || rel.slug === enemy.slug
-          );
-        if (isCounter) cScore += 15;
+        const enemyMeta = metaMap.get(Number(enemy.id));
+        const matchInH = (h.best_counters || []).find(
+          (b) => b.id === Number(enemy.id) || b.slug === enemy.slug
+        );
+        const matchInE = (enemyMeta?.countered_by || []).find(
+          (b) => b.id === h.id || b.slug === h.slug
+        );
+        const delta = matchInH?.counter_score ?? matchInE?.counter_score;
+        if (delta) cScore += delta;
       });
-      if (targetLane) {
-        const matchesLane =
-          (h.lanes && h.lanes.some((l) => String(l).toUpperCase() === targetLane)) ||
-          h.lane.toUpperCase().includes(targetLane);
-        if (matchesLane) cScore += 20;
-      }
+
+      if (matchesLane) cScore += 20;
       if (cScore > 0) counterScored.push({ id: h.id, score: cScore });
 
       let sScore = 0;
       allyPicks.forEach((ally) => {
-        const isSynergy =
-          (ally.synergies || []).some(
-            (rel: HeroRelationItem) => String(rel.id) === String(h.id) || rel.slug === h.slug
-          ) ||
-          (h.synergies || []).some(
-            (rel: HeroRelationItem) => String(rel.id) === String(ally.id) || rel.slug === ally.slug
-          );
-        if (isSynergy) sScore += 15;
+        const allyMeta = metaMap.get(Number(ally.id));
+        const matchInH = (h.synergies || []).find(
+          (s) => s.id === Number(ally.id) || s.slug === ally.slug
+        );
+        const matchInA = (allyMeta?.synergies || []).find(
+          (s) => s.id === h.id || s.slug === h.slug
+        );
+        const delta = matchInH?.synergy_score ?? matchInA?.synergy_score;
+        if (delta) sScore += delta;
       });
-      if (targetLane) {
-        const matchesLane =
-          (h.lanes && h.lanes.some((l) => String(l).toUpperCase() === targetLane)) ||
-          h.lane.toUpperCase().includes(targetLane);
-        if (matchesLane) sScore += 20;
-      }
+
+      if (matchesLane) sScore += 20;
       if (sScore > 0) synergyScored.push({ id: h.id, score: sScore });
     });
 
@@ -190,10 +189,10 @@ export const HeroGrid: React.FC = () => {
     synergyScored.sort((a, b) => b.score - a.score);
 
     return {
-      topCounterHeroIds: new Set(counterScored.slice(0, 3).map((c) => String(c.id))),
+      topCounterHeroIds: new Set(counterScored.slice(0, 4).map((c) => String(c.id))),
       topSynergyHeroIds: new Set(synergyScored.slice(0, 3).map((s) => String(s.id))),
     };
-  }, [activeSlot, bluePicks, redPicks, unavailableHeroIds]);
+  }, [activeSlot, userTeamSide, bluePicks, redPicks, unavailableHeroIds]);
 
   return (
     <section className="flex flex-col h-full min-h-0 rounded-none bg-transparent gap-1.5 p-0">
@@ -527,11 +526,6 @@ export const HeroGrid: React.FC = () => {
 
       {/* Tactical Intel Strip (Mounted directly beneath the hero roster grid) */}
       <TacticalIntelStrip />
-
-      {/* Live Tactical Composition & Coach Panel */}
-      <div className="shrink-0">
-        <TacticalCoachPanel />
-      </div>
     </section>
   );
 };

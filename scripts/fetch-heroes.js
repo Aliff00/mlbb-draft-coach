@@ -15,6 +15,7 @@ const HEROES_DIR = path.join(rootDir, 'public', 'heroes');
 const DATA_DIR = path.join(rootDir, 'public', 'data');
 const OUTPUT_JSON = path.join(rootDir, 'src', 'data', 'heroes.json');
 const META_OUTPUT_JSON = path.join(DATA_DIR, 'mlbb-meta.json');
+const SRC_META_OUTPUT_JSON = path.join(rootDir, 'src', 'data', 'mlbb-meta.json');
 
 const OFFICIAL_MAPI_LIST_URL = 'https://mapi.mobilelegends.com/hero/list?language=en';
 const OFFICIAL_MAPI_DETAIL_URL = 'https://mapi.mobilelegends.com/hero/detail';
@@ -746,12 +747,10 @@ async function main() {
     'utf-8'
   );
 
-  // Write public/data/mlbb-meta.json
-  await fs.promises.writeFile(
-    META_OUTPUT_JSON,
-    JSON.stringify(metaHeroes, null, 2),
-    'utf-8'
-  );
+  // Write public/data/mlbb-meta.json and src/data/mlbb-meta.json
+  const metaJsonString = JSON.stringify(metaHeroes, null, 2);
+  await fs.promises.writeFile(META_OUTPUT_JSON, metaJsonString, 'utf-8');
+  await fs.promises.writeFile(SRC_META_OUTPUT_JSON, metaJsonString, 'utf-8');
 
   console.log(`\n✅ Saved ${compiledHeroes.length} heroes to src/data/heroes.json`);
   console.log(`✅ Saved ${metaHeroes.length} heroes to public/data/mlbb-meta.json`);
