@@ -271,6 +271,10 @@ export const TopBar: React.FC = () => {
           <div className="absolute left-0 inset-y-0 w-80 sm:w-96 bg-gradient-to-r from-blue-600/35 via-blue-900/15 to-transparent blur-sm" />
           <div className="absolute -left-8 -top-6 w-64 h-28 bg-blue-500/25 blur-2xl rounded-full" />
 
+          {/* Dark center vignette to eliminate background spotlight/white spot */}
+          <div className="absolute left-1/2 -translate-x-1/2 inset-y-0 w-full max-w-2xl bg-gradient-to-b from-slate-950/95 via-slate-950/70 to-transparent blur-md" />
+          <div className="absolute left-1/2 -translate-x-1/2 -top-12 w-[440px] sm:w-[600px] h-36 bg-slate-950/90 blur-2xl rounded-full" />
+
           {/* Red flow from right edge */}
           <div className="absolute right-0 inset-y-0 w-80 sm:w-96 bg-gradient-to-l from-rose-600/35 via-rose-900/15 to-transparent blur-sm" />
           <div className="absolute -right-8 -top-6 w-64 h-28 bg-rose-500/25 blur-2xl rounded-full" />
