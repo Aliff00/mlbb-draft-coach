@@ -7,7 +7,18 @@ import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { useDraftStore } from './store/useDraftStore';
 
 export const App: React.FC = () => {
-  const { setIsFullscreen, setUser, setAuthLoading, fetchDrafts } = useDraftStore();
+  const { setIsFullscreen, setUser, setAuthLoading, fetchDrafts, setActiveSlot } = useDraftStore();
+
+  // Escape key deselects any active slot on the board
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveSlot(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setActiveSlot]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {

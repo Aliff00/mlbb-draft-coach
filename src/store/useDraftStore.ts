@@ -244,7 +244,14 @@ export const useDraftStore = create<DraftState>((set, get) => ({
 
   placeHero: (hero, targetSlot) => {
     const state = get();
-    const target = targetSlot || state.activeSlot || { type: 'PICK', team: 'BLUE', index: 0 };
+    const target = targetSlot || state.activeSlot;
+
+    // If no slot is selected or targeted on the board:
+    // Simply select this hero for matchup and tactical intel without overwriting Player 1 or any slot!
+    if (!target) {
+      set({ selectedHero: hero });
+      return;
+    }
 
     const nextBluePicks = [...state.bluePicks];
     const nextRedPicks = [...state.redPicks];
@@ -257,14 +264,6 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       } else {
         nextRedPicks[target.index] = hero;
       }
-
-      set({
-        bluePicks: nextBluePicks,
-        redPicks: nextRedPicks,
-        selectedHero: hero,
-        activeSlot: target, // Do not auto-advance; allow testing/clicking multiple heroes for this role
-        freePracticeTarget: target,
-      });
     } else {
       // Placing a Ban
       if (target.team === 'BLUE') {
@@ -272,15 +271,32 @@ export const useDraftStore = create<DraftState>((set, get) => ({
       } else {
         nextRedBans[target.index] = hero;
       }
-
-      set({
-        blueBans: nextBlueBans,
-        redBans: nextRedBans,
-        selectedHero: hero,
-        activeSlot: target, // Do not auto-advance
-        freePracticeTarget: target,
-      });
     }
+
+    // Check if the entire board (all 10 picks and all 10 bans) is completely filled
+    const isDraftComplete =
+      nextBluePicks.every(Boolean) &&
+      nextRedPicks.every(Boolean) &&
+      nextBlueBans.every(Boolean) &&
+      nextRedBans.every(Boolean);
+
+    // If placed via drag-and-drop (targetSlot passed), do not change activeSlot.
+    // If the entire draft is full, clear activeSlot so no accidental clicks overwrite players.
+    const nextActiveSlot = targetSlot
+      ? state.activeSlot
+      : isDraftComplete
+      ? null
+      : target;
+
+    set({
+      bluePicks: nextBluePicks,
+      redPicks: nextRedPicks,
+      blueBans: nextBlueBans,
+      redBans: nextRedBans,
+      selectedHero: hero,
+      activeSlot: nextActiveSlot,
+      freePracticeTarget: nextActiveSlot,
+    });
   },
 
   clearSlot: (type, team, index) => {
