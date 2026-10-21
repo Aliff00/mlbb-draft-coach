@@ -5,6 +5,7 @@ import { DEDICATED_LANES, TeamSide } from '../types/draft';
 import { getHeroBannerPosition, shouldHeroFlip } from '../data/heroBannerPositions';
 import { HeroAvatar } from './HeroAvatar';
 import { LaneIcon } from './LaneIcon';
+import { setCustomHeroDragImage } from '../utils/dragGhost';
 
 interface TeamColumnProps {
   team: TeamSide;
@@ -48,6 +49,9 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
               e.dataTransfer.setData('application/json', payload);
               e.dataTransfer.setData('text/plain', payload);
               e.dataTransfer.effectAllowed = 'copyMove';
+              if (hero) {
+                setCustomHeroDragImage(e, hero);
+              }
             }}
             onDragOver={(e) => {
               e.preventDefault();

@@ -21,6 +21,7 @@ import { HeroAvatar } from './HeroAvatar';
 import { LaneIcon } from './LaneIcon';
 import { getMapEffectColorTheme, MapEffectIcon } from './MapEffectIcon';
 import { TacticalCoachPanel } from './TacticalCoachPanel';
+import { setCustomHeroDragImage } from '../utils/dragGhost';
 
 export type HeroSortOrder =
   | 'RELEASE_ASC'
@@ -345,6 +346,7 @@ export const HeroGrid: React.FC = () => {
                   e.dataTransfer.setData('application/json', payload);
                   e.dataTransfer.setData('text/plain', payload);
                   e.dataTransfer.effectAllowed = 'copyMove';
+                  setCustomHeroDragImage(e, hero);
                 }}
                 onClick={() => placeHero(hero)}
                 className={`group relative flex flex-col items-center p-0.5 text-center transition-all duration-150 focus:outline-none ${

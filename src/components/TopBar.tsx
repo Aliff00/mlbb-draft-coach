@@ -28,6 +28,7 @@ import { getMapEffectColorTheme, MapEffectIcon } from './MapEffectIcon';
 import { ResetConfirmModal } from './ResetConfirmModal';
 import { SaveDraftModal } from './SaveDraftModal';
 import { signInWithOAuth, signOut } from '../lib/supabase';
+import { setCustomHeroDragImage } from '../utils/dragGhost';
 
 const MAP_TRAITS: { id: MapTraitType; label: string }[] = [
   { id: 'standard', label: 'Standard (Sanctum Island)' },
@@ -87,6 +88,9 @@ export const TopBar: React.FC = () => {
           e.dataTransfer.setData('application/json', payload);
           e.dataTransfer.setData('text/plain', payload);
           e.dataTransfer.effectAllowed = 'copyMove';
+          if (hero) {
+            setCustomHeroDragImage(e, hero);
+          }
         }}
         onDragOver={(e) => {
           e.preventDefault();
