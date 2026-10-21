@@ -176,9 +176,15 @@ export type ActionType = 'BAN' | 'PICK';
 
 export interface HeroRelationItem {
   id: number;
+  hero_id?: number;
   slug: string;
   name: string;
   avatar: string;
+  counter_score?: number;
+  compatibility_score?: number;
+  synergy_score?: number;
+  win_rate?: number;
+  delta_score?: number;
 }
 
 export interface HeroCounterTips {
@@ -202,6 +208,7 @@ export interface HeroRatings {
 
 export interface Hero {
   id: number | string;
+  hero_id?: number;
   slug?: string;
   name: string;
   role?: HeroRole | string;
@@ -210,6 +217,14 @@ export interface Hero {
   specialty: string;
   lane: string;
   lanes?: (LaneRole | string)[];
+  damage_type?: string;
+  damageType?: string;
+  win_rate?: number;
+  winRate?: number;
+  pick_rate?: number;
+  pickRate?: number;
+  ban_rate?: number;
+  banRate?: number;
   avatar?: string;
   banner?: string;
   bannerPosition?: string;
@@ -217,6 +232,10 @@ export interface Hero {
   counters?: HeroRelationItem[];
   counteredBy?: HeroRelationItem[];
   synergies?: HeroRelationItem[];
+  best_counters?: HeroRelationItem[];
+  countered_by?: HeroRelationItem[];
+  most_compatible?: HeroRelationItem[];
+  least_compatible?: HeroRelationItem[];
   counterTips?: HeroCounterTips;
   skills?: HeroSkillSummary[];
   ratings?: HeroRatings;

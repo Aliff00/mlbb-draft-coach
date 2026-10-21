@@ -75,6 +75,11 @@ const KNOWN_TRUE_DAMAGE_SLUGS = new Set([
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function calcRatingScore(deltaWinRate) {
+  const d = Math.abs(Number(deltaWinRate) || 0);
+  return Math.min(99, Math.max(60, Math.round(75 + d * 380)));
+}
+
 function slugify(name) {
   return String(name || '')
     .toLowerCase()
@@ -485,15 +490,18 @@ async function main() {
         const tid = Number(sub?.heroid);
         if (!tid) continue;
         const targetMeta = heroIdentityById.get(tid);
-        const score = Number(((sub?.increase_win_rate ?? 0) * 100).toFixed(2));
+        const delta = Number((sub?.increase_win_rate ?? 0));
+        const score = calcRatingScore(delta);
         const wr = Number(((sub?.hero_win_rate ?? rawWinRate) * 100).toFixed(2));
         best_counters.push({
+          hero_id: tid,
           id: tid,
           name: targetMeta?.name || sub?.hero?.data?.name || `Hero ${tid}`,
           slug: targetMeta?.slug || slugify(sub?.hero?.data?.name || `hero-${tid}`),
           avatar: targetMeta?.avatar || `/heroes/${tid}-icon.webp`,
           counter_score: score,
           win_rate: wr,
+          delta_score: Number((delta * 100).toFixed(2)),
         });
       }
     }
@@ -501,12 +509,14 @@ async function main() {
     if (best_counters.length === 0) {
       for (const rel of curatedCounters.slice(0, 5)) {
         best_counters.push({
+          hero_id: rel.id,
           id: rel.id,
           name: rel.name,
           slug: rel.slug,
           avatar: rel.avatar,
-          counter_score: 3.5,
-          win_rate: 50.0,
+          counter_score: 82,
+          win_rate: 52.5,
+          delta_score: 2.5,
         });
       }
     }
@@ -518,15 +528,18 @@ async function main() {
         const tid = Number(sub?.heroid);
         if (!tid) continue;
         const targetMeta = heroIdentityById.get(tid);
-        const score = Number((Math.abs(sub?.increase_win_rate ?? 0) * 100).toFixed(2));
+        const delta = Number((sub?.increase_win_rate ?? 0));
+        const score = calcRatingScore(delta);
         const wr = Number(((sub?.hero_win_rate ?? rawWinRate) * 100).toFixed(2));
         countered_by.push({
+          hero_id: tid,
           id: tid,
           name: targetMeta?.name || sub?.hero?.data?.name || `Hero ${tid}`,
           slug: targetMeta?.slug || slugify(sub?.hero?.data?.name || `hero-${tid}`),
           avatar: targetMeta?.avatar || `/heroes/${tid}-icon.webp`,
           counter_score: score,
           win_rate: wr,
+          delta_score: Number((delta * 100).toFixed(2)),
         });
       }
     }
@@ -534,51 +547,102 @@ async function main() {
     if (countered_by.length === 0) {
       for (const rel of curatedCounteredBy.slice(0, 5)) {
         countered_by.push({
+          hero_id: rel.id,
           id: rel.id,
           name: rel.name,
           slug: rel.slug,
           avatar: rel.avatar,
-          counter_score: 3.5,
-          win_rate: 50.0,
+          counter_score: 80,
+          win_rate: 47.5,
+          delta_score: -2.5,
         });
       }
     }
 
-    // 3. Synergies (sub_hero from teammate matchup telemetry: synergistic teammates)
-    const synergies = [];
+    // 3. Most Compatible (sub_hero from teammate matchup telemetry: highly compatible teammates)
+    const most_compatible = [];
     const teamSubHeroes = rankTeammate?.sub_hero || rankEnemy?.sub_hero;
     if (Array.isArray(teamSubHeroes) && teamSubHeroes.length > 0) {
       for (const sub of teamSubHeroes.slice(0, 5)) {
         const tid = Number(sub?.heroid);
         if (!tid) continue;
         const targetMeta = heroIdentityById.get(tid);
-        const score = Number(((sub?.increase_win_rate ?? 0) * 100).toFixed(2));
+        const delta = Number((sub?.increase_win_rate ?? 0));
+        const score = calcRatingScore(delta);
         const wr = Number(((sub?.hero_win_rate ?? rawWinRate) * 100).toFixed(2));
-        synergies.push({
+        most_compatible.push({
+          hero_id: tid,
           id: tid,
           name: targetMeta?.name || sub?.hero?.data?.name || `Hero ${tid}`,
           slug: targetMeta?.slug || slugify(sub?.hero?.data?.name || `hero-${tid}`),
           avatar: targetMeta?.avatar || `/heroes/${tid}-icon.webp`,
-          synergy_score: score,
+          compatibility_score: score,
           counter_score: score,
           win_rate: wr,
+          delta_score: Number((delta * 100).toFixed(2)),
         });
       }
     }
     // Fallback if telemetry empty
-    if (synergies.length === 0) {
+    if (most_compatible.length === 0) {
       for (const rel of curatedSynergies.slice(0, 5)) {
-        synergies.push({
+        most_compatible.push({
+          hero_id: rel.id,
           id: rel.id,
           name: rel.name,
           slug: rel.slug,
           avatar: rel.avatar,
-          synergy_score: 3.0,
-          counter_score: 3.0,
-          win_rate: 50.0,
+          compatibility_score: 82,
+          counter_score: 82,
+          win_rate: 53.0,
+          delta_score: 3.0,
         });
       }
     }
+
+    // 4. Least Compatible (sub_hero_last from teammate matchup telemetry: poorly compatible teammates)
+    const least_compatible = [];
+    const teamSubHeroesLast = rankTeammate?.sub_hero_last || rankEnemy?.sub_hero_last;
+    if (Array.isArray(teamSubHeroesLast) && teamSubHeroesLast.length > 0) {
+      for (const sub of teamSubHeroesLast.slice(0, 5)) {
+        const tid = Number(sub?.heroid);
+        if (!tid) continue;
+        const targetMeta = heroIdentityById.get(tid);
+        const delta = Number((sub?.increase_win_rate ?? 0));
+        const score = calcRatingScore(delta);
+        const wr = Number(((sub?.hero_win_rate ?? rawWinRate) * 100).toFixed(2));
+        least_compatible.push({
+          hero_id: tid,
+          id: tid,
+          name: targetMeta?.name || sub?.hero?.data?.name || `Hero ${tid}`,
+          slug: targetMeta?.slug || slugify(sub?.hero?.data?.name || `hero-${tid}`),
+          avatar: targetMeta?.avatar || `/heroes/${tid}-icon.webp`,
+          compatibility_score: score,
+          counter_score: score,
+          win_rate: wr,
+          delta_score: Number((delta * 100).toFixed(2)),
+        });
+      }
+    }
+    // Fallback if telemetry empty
+    if (least_compatible.length === 0) {
+      for (const rel of curatedCounters.slice(0, 5)) {
+        least_compatible.push({
+          hero_id: rel.id,
+          id: rel.id,
+          name: rel.name,
+          slug: rel.slug,
+          avatar: rel.avatar,
+          compatibility_score: 72,
+          counter_score: 72,
+          win_rate: 46.0,
+          delta_score: -4.0,
+        });
+      }
+    }
+
+    // Synergies alias for backwards compatibility
+    const synergies = most_compatible.map(m => ({ ...m, synergy_score: m.compatibility_score }));
 
     // Counter tips
     const counterTips = {
@@ -709,6 +773,8 @@ async function main() {
       synergies: appSynergies,
       best_counters,
       countered_by,
+      most_compatible,
+      least_compatible,
       counterTips,
       skills,
       ratings,
@@ -728,6 +794,8 @@ async function main() {
       ban_rate,
       best_counters,
       countered_by,
+      most_compatible,
+      least_compatible,
       synergies,
     });
 
@@ -794,25 +862,25 @@ async function main() {
   console.log(`   • Best Counters (Top 5):`);
   sampleHero.best_counters.forEach((c, idx) => {
     console.log(
-      `     ${idx + 1}. ${c.name.padEnd(14)} [Score: +${c.counter_score.toFixed(
-        2
-      )}% | WR: ${c.win_rate.toFixed(2)}%]`
+      `     ${idx + 1}. ${c.name.padEnd(14)} [Score: ${c.counter_score} | WR: ${c.win_rate}%]`
     );
   });
   console.log(`   • Countered By (Top 5):`);
   sampleHero.countered_by.forEach((c, idx) => {
     console.log(
-      `     ${idx + 1}. ${c.name.padEnd(14)} [Score: -${c.counter_score.toFixed(
-        2
-      )}% | WR: ${c.win_rate.toFixed(2)}%]`
+      `     ${idx + 1}. ${c.name.padEnd(14)} [Score: ${c.counter_score} | WR: ${c.win_rate}%]`
     );
   });
-  console.log(`   • Synergies (Top 5):`);
-  sampleHero.synergies.forEach((c, idx) => {
+  console.log(`   • Most Compatible (Top 5):`);
+  sampleHero.most_compatible.forEach((c, idx) => {
     console.log(
-      `     ${idx + 1}. ${c.name.padEnd(14)} [Score: +${c.synergy_score.toFixed(
-        2
-      )}% | WR: ${c.win_rate.toFixed(2)}%]`
+      `     ${idx + 1}. ${c.name.padEnd(14)} [Score: ${c.compatibility_score} | WR: ${c.win_rate}%]`
+    );
+  });
+  console.log(`   • Least Compatible (Top 5):`);
+  sampleHero.least_compatible.forEach((c, idx) => {
+    console.log(
+      `     ${idx + 1}. ${c.name.padEnd(14)} [Score: ${c.compatibility_score} | WR: ${c.win_rate}%]`
     );
   });
   console.log('='.repeat(64) + '\n');
