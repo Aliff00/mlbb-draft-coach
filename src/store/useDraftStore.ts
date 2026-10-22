@@ -16,6 +16,7 @@ import {
   LaneRole,
   MapEffectType,
   MapTraitType,
+  RankTier,
   TeamSide,
 } from '../types/draft';
 
@@ -57,6 +58,8 @@ interface DraftState {
   roleFilter: 'ALL' | HeroRole;
   laneFilter: 'ALL' | LaneRole;
   searchQuery: string;
+  rankTier: RankTier;
+  setRankTier: (tier: RankTier) => void;
   mapSynergyOnly: boolean;
   isFullscreen: boolean;
 
@@ -166,6 +169,8 @@ export const useDraftStore = create<DraftState>((set, get) => ({
   roleFilter: 'ALL',
   laneFilter: 'ALL',
   searchQuery: '',
+  rankTier: 'mythical_glory',
+  setRankTier: (rankTier) => set({ rankTier }),
   mapSynergyOnly: false,
   isFullscreen: false,
 

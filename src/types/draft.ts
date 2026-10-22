@@ -141,6 +141,38 @@ export interface HeroRatings {
   difficulty: number;
 }
 
+export type RankTier =
+  | 'mythical_glory'
+  | 'mythical_honor'
+  | 'mythic'
+  | 'legend'
+  | 'all_ranks';
+
+export interface RankTierOption {
+  key: RankTier;
+  label: string;
+  badgeLabel: string;
+}
+
+export const RANK_TIER_OPTIONS: RankTierOption[] = [
+  { key: 'mythical_glory', label: 'Mythical Glory+', badgeLabel: 'GLORY+' },
+  { key: 'mythical_honor', label: 'Mythical Honor', badgeLabel: 'HONOR' },
+  { key: 'mythic', label: 'Mythic', badgeLabel: 'MYTHIC' },
+  { key: 'legend', label: 'Legend', badgeLabel: 'LEGEND' },
+  { key: 'all_ranks', label: 'All Ranks', badgeLabel: 'ALL' },
+];
+
+export interface HeroRankMetrics {
+  win_rate: number;
+  pick_rate: number;
+  ban_rate: number;
+  best_counters: HeroRelationItem[];
+  countered_by: HeroRelationItem[];
+  most_compatible: HeroRelationItem[];
+  least_compatible: HeroRelationItem[];
+  synergies?: HeroRelationItem[];
+}
+
 export interface Hero {
   id: number | string;
   hero_id?: number;
@@ -171,6 +203,7 @@ export interface Hero {
   countered_by?: HeroRelationItem[];
   most_compatible?: HeroRelationItem[];
   least_compatible?: HeroRelationItem[];
+  ranks?: Partial<Record<RankTier, HeroRankMetrics>>;
   counterTips?: HeroCounterTips;
   skills?: HeroSkillSummary[];
   ratings?: HeroRatings;

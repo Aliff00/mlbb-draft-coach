@@ -1,8 +1,15 @@
 import React, { useMemo } from 'react';
 import {
   AlertTriangle,
+  ArrowRight,
   BarChart2,
+  ShieldAlert,
+  Swords,
   Target,
+  ThumbsDown,
+  ThumbsUp,
+  Trophy,
+  Users,
   X,
 } from 'lucide-react';
 import { ALL_HEROES, useDraftStore } from '../store/useDraftStore';
@@ -10,8 +17,11 @@ import {
   DEDICATED_LANES,
   getHeroDamageType,
   Hero,
+  HeroRankMetrics,
   HeroRelationItem,
   MAP_EFFECTS_CONFIG,
+  RANK_TIER_OPTIONS,
+  RankTier,
   TeamSide,
 } from '../types/draft';
 import metaHeroes from '../data/mlbb-meta.json';
@@ -21,14 +31,34 @@ export interface TacticalIntelStripProps {
   className?: string;
 }
 
-interface RecommendedChip {
+interface TacticalMatchupItem {
   hero: Hero;
   score: number;
   badgeScore: number;
-  tooltip: string;
-  targetHeroName?: string;
   winRate?: number;
-  isDirectLaneMatch?: boolean;
+  pickRate?: number;
+  targetHero?: Hero | null;
+  targetHeroName?: string;
+  tooltip: string;
+  isBanned: boolean;
+  isPicked: boolean;
+  isUnavailable: boolean;
+  statusBadge: 'BANNED' | 'PICKED' | null;
+}
+
+function getHeroMetricsForTier(meta: any, tier: RankTier): HeroRankMetrics {
+  if (meta?.ranks && meta.ranks[tier]) {
+    return meta.ranks[tier];
+  }
+  return {
+    win_rate: meta?.win_rate ?? 50,
+    pick_rate: meta?.pick_rate ?? 1,
+    ban_rate: meta?.ban_rate ?? 0,
+    best_counters: meta?.best_counters ?? [],
+    countered_by: meta?.countered_by ?? [],
+    most_compatible: meta?.most_compatible ?? meta?.synergies ?? [],
+    least_compatible: meta?.least_compatible ?? [],
+  };
 }
 
 export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
@@ -43,33 +73,37 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     blueBans,
     redBans,
     mapTrait,
+    rankTier,
     placeHero,
     inspectedHero,
     setInspectedHero,
   } = useDraftStore();
 
   const mapConfig = MAP_EFFECTS_CONFIG[mapTrait];
+  const activeRankOption =
+    RANK_TIER_OPTIONS.find((t) => t.key === rankTier) || RANK_TIER_OPTIONS[0];
 
-  // Tactical Intel is dynamic to the selected slot's team!
-  // If active slot is Red team, Red is target and Blue is opponent.
-  // If active slot is Blue team, Blue is target and Red is opponent.
+  // Dynamic target team based on selected slot, falling back to user's side
   const targetTeam: TeamSide = activeSlot?.team ?? (userTeamSide === 'blue' ? 'BLUE' : 'RED');
 
   const targetTeamPicks = targetTeam === 'BLUE' ? bluePicks : redPicks;
   const opposingTeamPicks = targetTeam === 'BLUE' ? redPicks : bluePicks;
 
-  // Set of all unavailable heroes (banned or picked on either team)
-  const unavailableHeroIds = useMemo(() => {
-    const set = new Set<string | number>();
-    [...bluePicks, ...redPicks, ...blueBans, ...redBans].forEach((h) => {
-      if (h) {
-        set.add(h.id);
-        set.add(String(h.id));
-        if (h.slug) set.add(h.slug);
-      }
-    });
-    return set;
-  }, [bluePicks, redPicks, blueBans, redBans]);
+  // Check if a hero is currently banned anywhere on the board
+  const isHeroBanned = (heroId: number | string, slug?: string) => {
+    const idNum = Number(heroId);
+    return [...blueBans, ...redBans].some(
+      (b) => b && (Number(b.id) === idNum || (slug && b.slug === slug))
+    );
+  };
+
+  // Check if a hero is currently picked anywhere on the board
+  const isHeroPicked = (heroId: number | string, slug?: string) => {
+    const idNum = Number(heroId);
+    return [...bluePicks, ...redPicks].some(
+      (p) => p && (Number(p.id) === idNum || (slug && p.slug === slug))
+    );
+  };
 
   // Locked heroes for both teams
   const targetLocked = useMemo(
@@ -81,7 +115,9 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     [opposingTeamPicks]
   );
 
-  // Determine active slot target on the board
+  const isBoardEmpty = targetLocked.length === 0 && opposingLocked.length === 0;
+
+  // Active slot target on the board
   const activeSlotTarget = useMemo(() => {
     if (activeSlot?.type === 'PICK') {
       const laneConfig = DEDICATED_LANES[activeSlot.index] || DEDICATED_LANES[0];
@@ -116,7 +152,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     };
   }, [activeSlot]);
 
-  // Fast ID / slug lookup maps for heroes & meta telemetry
+  // Fast ID lookup maps for heroes & meta telemetry
   const { metaById, heroById } = useMemo(() => {
     const mById = new Map<number, (typeof metaHeroes)[number]>();
     metaHeroes.forEach((m) => mById.set(m.id, m));
@@ -127,200 +163,403 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     return { metaById: mById, heroById: hById };
   }, []);
 
-  // Compute Dynamic Recommendations from mlbb-meta.json
-  const { topCounters, topCompatible } = useMemo(() => {
-    // When no slot is selected, do not compute or show recommendations
-    if (!activeSlotTarget.hasActiveSlot) {
-      return { topCounters: [], topCompatible: [] };
+  // Helper to resolve HeroRelationItem or ID to full Hero
+  const resolveRelationHero = (rel: HeroRelationItem | any): Hero | null => {
+    if (!rel) return null;
+    const tid = Number(rel.hero_id || rel.id);
+    return (
+      heroById.get(tid) ||
+      ALL_HEROES.find((h) => Number(h.id) === tid || h.slug === rel.slug) ||
+      null
+    );
+  };
+
+  // Click-to-Draft Flow: Immediately place suggested hero into active lane slot
+  const handleHeroChipClick = (hero: Hero) => {
+    if (!activeSlot || activeSlot.type !== 'PICK') {
+      setInspectedHero(hero);
+      return;
+    }
+
+    placeHero(hero, activeSlot);
+    setActiveSlot(null);
+  };
+
+  // =========================================================================
+  // REQUIREMENT 2: EMPTY DRAFT STATE (META PRIORITY)
+  // When no heroes are locked yet and an empty lane slot is tapped:
+  // Display Top 5 Meta Priority heroes for that lane sorted by win_rate and pick_rate
+  // =========================================================================
+  const topMetaPriority = useMemo(() => {
+    if (!isBoardEmpty || !activeSlotTarget.hasActiveSlot || !activeSlotTarget.targetLane) {
+      return [];
+    }
+
+    const targetLane = activeSlotTarget.targetLane;
+    const candidates: TacticalMatchupItem[] = [];
+
+    metaHeroes.forEach((candidateMeta) => {
+      const fullHero = heroById.get(candidateMeta.id);
+      if (!fullHero) return;
+
+      const matchesLane =
+        candidateMeta.lanes &&
+        candidateMeta.lanes.some(
+          (l) => l.toUpperCase() === targetLane.toUpperCase()
+        );
+      if (!matchesLane) return;
+
+      const metrics = getHeroMetricsForTier(candidateMeta, rankTier);
+      const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
+      const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
+      const isUnavailable = banned || picked;
+      const statusBadge = banned ? 'BANNED' : picked ? 'PICKED' : null;
+
+      // Meta priority composite score: weighted by win rate and pick rate
+      const compositeScore = metrics.win_rate * 2 + metrics.pick_rate;
+
+      candidates.push({
+        hero: fullHero,
+        score: compositeScore,
+        badgeScore: Math.round(metrics.win_rate),
+        winRate: metrics.win_rate,
+        pickRate: metrics.pick_rate,
+        tooltip: `${fullHero.name} — ${metrics.win_rate}% Win Rate | ${metrics.pick_rate}% Pick Rate in ${activeRankOption.label}`,
+        isBanned: banned,
+        isPicked: picked,
+        isUnavailable,
+        statusBadge,
+      });
+    });
+
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates.slice(0, 5);
+  }, [
+    isBoardEmpty,
+    activeSlotTarget.hasActiveSlot,
+    activeSlotTarget.targetLane,
+    rankTier,
+    activeRankOption.label,
+    heroById,
+    blueBans,
+    redBans,
+    bluePicks,
+    redPicks,
+  ]);
+
+  // =========================================================================
+  // REQUIREMENT 3 & 4: 2-COLUMN TACTICAL INTEL (WHEN HEROES ARE LOCKED)
+  // Left: Advantage vs Enemy (Best Counters) + Best Teammates (Compatible)
+  // Right: Weak Against Enemy (Countered By) + Poor Compatibility (Not Compatible)
+  // Persistent Banned/Picked State: Never removed, dimmed with badge and score visible
+  // =========================================================================
+  const tacticalColumns = useMemo(() => {
+    if (isBoardEmpty || !activeSlotTarget.hasActiveSlot) {
+      return {
+        bestCounters: [] as TacticalMatchupItem[],
+        bestTeammates: [] as TacticalMatchupItem[],
+        weakAgainst: [] as TacticalMatchupItem[],
+        poorCompatibility: [] as TacticalMatchupItem[],
+      };
     }
 
     const targetLane = activeSlotTarget.targetLane;
 
-    // -------------------------------------------------------------
-    // 1. Calculate Top BEST COUNTERS vs Opposing Team Locked Heroes
-    // -------------------------------------------------------------
-    const counterCandidates: RecommendedChip[] = [];
+    // Filter all hero candidates playing the active lane
+    const laneCandidates = metaHeroes.filter((m) => {
+      if (!targetLane) return true;
+      return (
+        m.lanes &&
+        m.lanes.some((l) => l.toUpperCase() === targetLane.toUpperCase())
+      );
+    });
 
+    // 1. ADVANTAGE VS ENEMY (BEST COUNTERS)
+    const counterItems: TacticalMatchupItem[] = [];
     if (opposingLocked.length > 0) {
-      metaHeroes.forEach((candidateMeta) => {
-        if (
-          unavailableHeroIds.has(candidateMeta.id) ||
-          (candidateMeta.slug && unavailableHeroIds.has(candidateMeta.slug))
-        ) {
-          return;
-        }
-
+      laneCandidates.forEach((candidateMeta) => {
         const fullHero = heroById.get(candidateMeta.id);
         if (!fullHero) return;
 
-        const matchesLane =
-          !targetLane ||
-          (candidateMeta.lanes &&
-            candidateMeta.lanes.some(
-              (l) => l.toUpperCase() === targetLane.toUpperCase()
-            ));
-
-        // Strict role/lane requirement: do not recommend heroes outside the active slot role
-        if (!matchesLane) return;
-
+        const candidateMetrics = getHeroMetricsForTier(candidateMeta, rankTier);
         let bestScore = 0;
-        let matchedEnemyName = '';
+        let matchedEnemy: Hero | null = null;
+        let matchedEnemyWr = 0;
         let matchCount = 0;
-        let bestWr = 0;
 
         opposingLocked.forEach((enemy) => {
           const enemyId = Number(enemy.id);
           const enemyMeta = metaById.get(enemyId);
+          const enemyMetrics = enemyMeta
+            ? getHeroMetricsForTier(enemyMeta, rankTier)
+            : null;
 
-          const matchInCandidate = (candidateMeta.best_counters || []).find(
+          const matchInCandidate = (candidateMetrics.best_counters || []).find(
             (b) => b.id === enemyId || (b as any).hero_id === enemyId || b.slug === enemy.slug
           );
-          const matchInEnemy = (enemyMeta?.countered_by || []).find(
-            (b) => b.id === candidateMeta.id || (b as any).hero_id === candidateMeta.id || b.slug === candidateMeta.slug
+          const matchInEnemy = (enemyMetrics?.countered_by || []).find(
+            (b) =>
+              b.id === candidateMeta.id ||
+              (b as any).hero_id === candidateMeta.id ||
+              b.slug === candidateMeta.slug
           );
 
           const matched = matchInCandidate || matchInEnemy;
           if (matched) {
             matchCount++;
             const score = matched.counter_score || 85;
-            const wr = matched.win_rate ?? Math.round(candidateMeta.win_rate || 50);
-
+            const wr = matched.win_rate ?? Math.round(candidateMetrics.win_rate || 50);
             if (score > bestScore) {
               bestScore = score;
-              matchedEnemyName = enemy.name;
-              bestWr = wr;
+              matchedEnemy = enemy;
+              matchedEnemyWr = wr;
             }
           }
         });
 
-        if (matchCount > 0) {
-          let totalRank = bestScore * 2 + matchCount * 14;
-
+        if (matchCount > 0 && matchedEnemy) {
+          const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
+          const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
+          let totalScore = bestScore * 2 + matchCount * 10;
           if (
             mapConfig.synergyHeroIds.includes(String(candidateMeta.id)) ||
             (candidateMeta.slug && mapConfig.synergyHeroIds.includes(candidateMeta.slug))
           ) {
-            totalRank += 5;
+            totalScore += 5;
           }
-          totalRank += (candidateMeta.win_rate || 50) / 10;
 
-          const multiMatchNotice =
-            matchCount > 1 ? ` (+${matchCount - 1} more enemies)` : '';
-          const tooltip = `Counters ${matchedEnemyName} (${bestWr}% Matchup WR)${multiMatchNotice}`;
-
-          counterCandidates.push({
+          counterItems.push({
             hero: fullHero,
-            score: totalRank,
-            badgeScore: bestScore || 88,
-            targetHeroName: matchedEnemyName,
-            tooltip,
+            score: totalScore,
+            badgeScore: bestScore,
+            winRate: matchedEnemyWr,
+            targetHero: matchedEnemy,
+            targetHeroName: (matchedEnemy as Hero).name,
+            tooltip: `Counters ${(matchedEnemy as Hero).name} (${matchedEnemyWr}% WR) in ${activeRankOption.label}`,
+            isBanned: banned,
+            isPicked: picked,
+            isUnavailable: banned || picked,
+            statusBadge: banned ? 'BANNED' : picked ? 'PICKED' : null,
           });
         }
       });
+      counterItems.sort((a, b) => b.score - a.score);
     }
 
-    counterCandidates.sort((a, b) => b.score - a.score);
-    const counters = counterCandidates.slice(0, 4);
-
-    // -------------------------------------------------------------
-    // 2. Calculate Top COMPATIBLE with Target Team Locked Heroes
-    // -------------------------------------------------------------
-    const compatCandidates: RecommendedChip[] = [];
-    const usedCounterIds = new Set(counters.map((c) => String(c.hero.id)));
-
+    // 2. BEST TEAMMATES (COMPATIBLE)
+    const teammateItems: TacticalMatchupItem[] = [];
     if (targetLocked.length > 0) {
-      metaHeroes.forEach((candidateMeta) => {
-        if (
-          unavailableHeroIds.has(candidateMeta.id) ||
-          (candidateMeta.slug && unavailableHeroIds.has(candidateMeta.slug)) ||
-          usedCounterIds.has(String(candidateMeta.id))
-        ) {
-          return;
-        }
-
+      laneCandidates.forEach((candidateMeta) => {
         const fullHero = heroById.get(candidateMeta.id);
         if (!fullHero) return;
 
-        const matchesLane =
-          !targetLane ||
-          (candidateMeta.lanes &&
-            candidateMeta.lanes.some(
-              (l) => l.toUpperCase() === targetLane.toUpperCase()
-            ));
-
-        // Strict role/lane requirement: do not recommend heroes outside the active slot role
-        if (!matchesLane) return;
-
+        const candidateMetrics = getHeroMetricsForTier(candidateMeta, rankTier);
         let bestScore = 0;
-        let primaryTooltip = '';
-        let matchedAllyName = '';
+        let matchedAlly: Hero | null = null;
+        let matchedAllyWr = 0;
         let matchCount = 0;
 
         targetLocked.forEach((ally) => {
           const allyId = Number(ally.id);
           const allyMeta = metaById.get(allyId);
+          const allyMetrics = allyMeta ? getHeroMetricsForTier(allyMeta, rankTier) : null;
 
-          const candidateCompatList = (candidateMeta as any).most_compatible || candidateMeta.synergies || [];
-          const matchInCandidate = candidateCompatList.find(
-            (s: any) => s.id === allyId || s.hero_id === allyId || s.slug === ally.slug
+          const matchInCandidate = (candidateMetrics.most_compatible || []).find(
+            (s) => s.id === allyId || (s as any).hero_id === allyId || s.slug === ally.slug
           );
-
-          const allyCompatList = (allyMeta as any)?.most_compatible || allyMeta?.synergies || [];
-          const matchInAlly = allyCompatList.find(
-            (s: any) => s.id === candidateMeta.id || s.hero_id === candidateMeta.id || s.slug === candidateMeta.slug
+          const matchInAlly = (allyMetrics?.most_compatible || []).find(
+            (s) =>
+              s.id === candidateMeta.id ||
+              (s as any).hero_id === candidateMeta.id ||
+              s.slug === candidateMeta.slug
           );
 
           const matched = matchInCandidate || matchInAlly;
           if (matched) {
             matchCount++;
-            const score = matched.compatibility_score || matched.counter_score || (matched as any).synergy_score || 82;
+            const score =
+              matched.compatibility_score || matched.counter_score || (matched as any).synergy_score || 82;
+            const wr = matched.win_rate ?? Math.round(candidateMetrics.win_rate || 50);
             if (score > bestScore) {
               bestScore = score;
-              matchedAllyName = ally.name;
-              const wr = matched.win_rate ?? Math.round(candidateMeta.win_rate || 50);
-              primaryTooltip = `Compatible with ${ally.name} (${wr}% WR)`;
+              matchedAlly = ally;
+              matchedAllyWr = wr;
             }
           }
         });
 
-        if (matchCount > 0) {
-          let totalRank = bestScore * 2 + matchCount * 12;
-          if (matchesLane) totalRank += 35;
+        if (matchCount > 0 && matchedAlly) {
+          const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
+          const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
+          let totalScore = bestScore * 2 + matchCount * 10;
           if (
             mapConfig.synergyHeroIds.includes(String(candidateMeta.id)) ||
             (candidateMeta.slug && mapConfig.synergyHeroIds.includes(candidateMeta.slug))
           ) {
-            totalRank += 5;
+            totalScore += 5;
           }
-          totalRank += (candidateMeta.win_rate || 50) / 10;
 
-          compatCandidates.push({
+          teammateItems.push({
             hero: fullHero,
-            score: totalRank,
-            badgeScore: bestScore || 82,
-            targetHeroName: matchedAllyName,
-            tooltip: primaryTooltip || `Compatible with ${matchedAllyName || 'Ally'}`,
+            score: totalScore,
+            badgeScore: bestScore,
+            winRate: matchedAllyWr,
+            targetHero: matchedAlly,
+            targetHeroName: (matchedAlly as Hero).name,
+            tooltip: `High compatibility with ${(matchedAlly as Hero).name} (${matchedAllyWr}% WR)`,
+            isBanned: banned,
+            isPicked: picked,
+            isUnavailable: banned || picked,
+            statusBadge: banned ? 'BANNED' : picked ? 'PICKED' : null,
           });
         }
       });
+      teammateItems.sort((a, b) => b.score - a.score);
     }
 
-    compatCandidates.sort((a, b) => b.score - a.score);
-    const compatible = compatCandidates.slice(0, 3);
+    // 3. WEAK AGAINST ENEMY (MOST COUNTERED BY)
+    const weakItems: TacticalMatchupItem[] = [];
+    if (opposingLocked.length > 0) {
+      laneCandidates.forEach((candidateMeta) => {
+        const fullHero = heroById.get(candidateMeta.id);
+        if (!fullHero) return;
+
+        const candidateMetrics = getHeroMetricsForTier(candidateMeta, rankTier);
+        let worstScore = 0;
+        let dangerousEnemy: Hero | null = null;
+        let matchWr = 0;
+
+        opposingLocked.forEach((enemy) => {
+          const enemyId = Number(enemy.id);
+          const enemyMeta = metaById.get(enemyId);
+          const enemyMetrics = enemyMeta ? getHeroMetricsForTier(enemyMeta, rankTier) : null;
+
+          const matchInCandidate = (candidateMetrics.countered_by || []).find(
+            (c) => c.id === enemyId || (c as any).hero_id === enemyId || c.slug === enemy.slug
+          );
+          const matchInEnemy = (enemyMetrics?.best_counters || []).find(
+            (c) =>
+              c.id === candidateMeta.id ||
+              (c as any).hero_id === candidateMeta.id ||
+              c.slug === candidateMeta.slug
+          );
+
+          const matched = matchInCandidate || matchInEnemy;
+          if (matched) {
+            const score = matched.counter_score || 85;
+            const wr = matched.win_rate ?? 46;
+            if (score > worstScore) {
+              worstScore = score;
+              dangerousEnemy = enemy;
+              matchWr = wr;
+            }
+          }
+        });
+
+        if (worstScore > 0 && dangerousEnemy) {
+          const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
+          const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
+
+          weakItems.push({
+            hero: fullHero,
+            score: worstScore,
+            badgeScore: worstScore,
+            winRate: matchWr,
+            targetHero: dangerousEnemy,
+            targetHeroName: (dangerousEnemy as Hero).name,
+            tooltip: `Vulnerable to ${(dangerousEnemy as Hero).name} (${matchWr}% WR)`,
+            isBanned: banned,
+            isPicked: picked,
+            isUnavailable: banned || picked,
+            statusBadge: banned ? 'BANNED' : picked ? 'PICKED' : null,
+          });
+        }
+      });
+      weakItems.sort((a, b) => b.score - a.score);
+    }
+
+    // 4. POOR COMPATIBILITY (NOT COMPATIBLE)
+    const poorItems: TacticalMatchupItem[] = [];
+    if (targetLocked.length > 0) {
+      laneCandidates.forEach((candidateMeta) => {
+        const fullHero = heroById.get(candidateMeta.id);
+        if (!fullHero) return;
+
+        const candidateMetrics = getHeroMetricsForTier(candidateMeta, rankTier);
+        let worstClashScore = 0;
+        let clashedAlly: Hero | null = null;
+        let matchWr = 0;
+
+        targetLocked.forEach((ally) => {
+          const allyId = Number(ally.id);
+          const allyMeta = metaById.get(allyId);
+          const allyMetrics = allyMeta ? getHeroMetricsForTier(allyMeta, rankTier) : null;
+
+          const matchInCandidate = (candidateMetrics.least_compatible || []).find(
+            (c) => c.id === allyId || (c as any).hero_id === allyId || c.slug === ally.slug
+          );
+          const matchInAlly = (allyMetrics?.least_compatible || []).find(
+            (c) =>
+              c.id === candidateMeta.id ||
+              (c as any).hero_id === candidateMeta.id ||
+              c.slug === candidateMeta.slug
+          );
+
+          const matched = matchInCandidate || matchInAlly;
+          if (matched) {
+            const score = matched.compatibility_score || matched.counter_score || 75;
+            const wr = matched.win_rate ?? 46;
+            if (score > worstClashScore) {
+              worstClashScore = score;
+              clashedAlly = ally;
+              matchWr = wr;
+            }
+          }
+        });
+
+        if (worstClashScore > 0 && clashedAlly) {
+          const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
+          const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
+
+          poorItems.push({
+            hero: fullHero,
+            score: worstClashScore,
+            badgeScore: worstClashScore,
+            winRate: matchWr,
+            targetHero: clashedAlly,
+            targetHeroName: (clashedAlly as Hero).name,
+            tooltip: `Low synergy clash with ${(clashedAlly as Hero).name} (${matchWr}% WR)`,
+            isBanned: banned,
+            isPicked: picked,
+            isUnavailable: banned || picked,
+            statusBadge: banned ? 'BANNED' : picked ? 'PICKED' : null,
+          });
+        }
+      });
+      poorItems.sort((a, b) => b.score - a.score);
+    }
 
     return {
-      topCounters: counters,
-      topCompatible: compatible,
+      bestCounters: counterItems.slice(0, 3),
+      bestTeammates: teammateItems.slice(0, 3),
+      weakAgainst: weakItems.slice(0, 3),
+      poorCompatibility: poorItems.slice(0, 3),
     };
   }, [
+    isBoardEmpty,
     activeSlotTarget.hasActiveSlot,
     activeSlotTarget.targetLane,
-    unavailableHeroIds,
     opposingLocked,
     targetLocked,
+    rankTier,
+    activeRankOption.label,
     mapConfig,
     metaById,
     heroById,
+    blueBans,
+    redBans,
+    bluePicks,
+    redPicks,
   ]);
 
   // Compute Target Team Composition Health & Damage Balance
@@ -386,34 +625,16 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     };
   }, [targetLocked]);
 
-  // Helper to resolve HeroRelationItem to full Hero
-  const resolveRelationHero = (rel: HeroRelationItem | any): Hero | null => {
-    const tid = Number(rel.hero_id || rel.id);
-    return (
-      heroById.get(tid) ||
-      ALL_HEROES.find(
-        (h) => Number(h.id) === tid || h.slug === rel.slug
-      ) ||
-      null
-    );
-  };
-
-  // Click-to-Draft Flow: Immediately place suggested hero into active lane slot
-  const handleHeroChipClick = (hero: Hero) => {
-    if (!activeSlot || activeSlot.type !== 'PICK') {
-      setInspectedHero(hero);
-      return;
-    }
-
-    placeHero(hero, activeSlot);
-    setActiveSlot(null);
-  };
-
-  // Inspect Meta Data for inspected hero
+  // Inspect Meta Data for inspected hero (dynamic to active rank tier)
   const inspectedMeta = useMemo(() => {
     if (!inspectedHero) return null;
-    return metaById.get(Number(inspectedHero.id)) || null;
-  }, [inspectedHero, metaById]);
+    const baseMeta = metaById.get(Number(inspectedHero.id));
+    if (!baseMeta) return null;
+    return {
+      ...baseMeta,
+      ...getHeroMetricsForTier(baseMeta, rankTier),
+    };
+  }, [inspectedHero, metaById, rankTier]);
 
   return (
     <div
@@ -438,8 +659,9 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                   {inspectedHero.lane || inspectedHero.role}
                 </span>
                 {inspectedMeta?.win_rate && (
-                  <span className="text-[9px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 rounded px-1.5 py-0.5">
-                    {inspectedMeta.win_rate}% WR
+                  <span className="text-[9px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 rounded px-1.5 py-0.5 flex items-center gap-1">
+                    <span>{inspectedMeta.win_rate}% WR</span>
+                    <span className="text-slate-500 font-normal">({activeRankOption.badgeLabel})</span>
                   </span>
                 )}
               </div>
@@ -616,9 +838,99 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
             <span>COMP: STANDBY</span>
           </div>
         </div>
+      ) : isBoardEmpty ? (
+        /* ========================================================= */
+        /* REQUIREMENT 2: EMPTY DRAFT STATE (TOP 5 META PRIORITY)    */
+        /* ========================================================= */
+        <div className="flex flex-col gap-1.5 w-full animate-fadeIn">
+          {/* Top Sub-Row: Lane Indicator & Meta Priority Label */}
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <div
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-hud font-bold uppercase tracking-wider shadow-sm border ${
+                  targetTeam === 'BLUE'
+                    ? 'bg-blue-950/80 border-blue-500/60 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.25)]'
+                    : 'bg-rose-950/80 border-rose-500/60 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.25)]'
+                }`}
+              >
+                <Target className="h-3 w-3 flex-shrink-0" />
+                <span>{activeSlotTarget.label}</span>
+              </div>
+
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-950/60 border border-amber-500/40 text-[10px] font-hud font-bold text-amber-300">
+                <Trophy className="h-3 w-3 text-amber-400 flex-shrink-0" />
+                <span>TOP 5 META PRIORITY ({activeRankOption.label})</span>
+              </div>
+            </div>
+
+            <span className="text-[10.5px] text-slate-400 italic hidden sm:inline">
+              Sorted by Win Rate & Pick Rate in {activeRankOption.label}
+            </span>
+          </div>
+
+          {/* Meta Priority Hero Row */}
+          <div className="flex items-center gap-2.5 pt-1 border-t border-slate-800/50 overflow-x-auto pb-0.5">
+            {topMetaPriority.map((item, idx) => (
+              <button
+                key={`meta-prio-${item.hero.id}`}
+                type="button"
+                onClick={() => !item.isUnavailable && handleHeroChipClick(item.hero)}
+                disabled={item.isUnavailable}
+                className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border transition flex-shrink-0 ${
+                  item.isUnavailable
+                    ? 'bg-slate-900/40 border-slate-800/50 opacity-40 pointer-events-none'
+                    : 'bg-slate-900/90 border-slate-700/80 hover:border-amber-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                }`}
+                title={item.tooltip}
+              >
+                {/* Ranking Number */}
+                <span className="font-hud font-bold text-xs text-amber-400/90 w-3">
+                  #{idx + 1}
+                </span>
+
+                {/* Hero Avatar with WR Badge */}
+                <div className="relative h-7 w-7 rounded-full flex-shrink-0">
+                  <div className="h-full w-full rounded-full overflow-hidden border border-amber-400/70 bg-slate-900">
+                    <img
+                      src={item.hero.avatar}
+                      alt={item.hero.name}
+                      className={`h-full w-full object-cover ${item.isUnavailable ? 'grayscale' : ''}`}
+                    />
+                  </div>
+                  <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-emerald-950/95 text-emerald-300 border border-emerald-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                    {item.badgeScore}%
+                  </span>
+                  {item.statusBadge && (
+                    <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[7px] font-hud font-bold leading-none shadow z-20">
+                      {item.statusBadge === 'BANNED' ? '🚫 BANNED' : '🔒 PICKED'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Hero Details */}
+                <div className="flex flex-col text-left">
+                  <span className="font-hud font-bold text-[11px] text-slate-200 leading-tight">
+                    {item.hero.name}
+                  </span>
+                  <div className="flex items-center gap-1.5 text-[9px] text-slate-400">
+                    <span className="text-emerald-400 font-semibold">{item.winRate}% WR</span>
+                    <span className="text-slate-600">•</span>
+                    <span className="text-sky-400 font-semibold">{item.pickRate}% PR</span>
+                  </div>
+                </div>
+              </button>
+            ))}
+
+            {topMetaPriority.length === 0 && (
+              <span className="text-slate-500 text-xs italic py-1">
+                No priority heroes registered for this lane.
+              </span>
+            )}
+          </div>
+        </div>
       ) : (
         /* ========================================================= */
-        /* STATE 1: ACTIVE LANE DRAFT INTELLIGENCE & MATCHUPS        */
+        /* REQUIREMENT 3 & 4: 2-COLUMN TACTICAL INTEL LAYOUT         */
         /* ========================================================= */
         <div className="flex flex-col gap-1.5 w-full animate-fadeIn">
           {/* Top Sub-Row: Slot Target Indicator (Left) & Comp Balance (Right) */}
@@ -667,69 +979,331 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
             </div>
           </div>
 
-          {/* Bottom Sub-Row: Best Counters (Left) & Compatible (Right) */}
-          <div className="flex items-center justify-between w-full gap-4 pt-1 border-t border-slate-800/50 flex-wrap sm:flex-nowrap">
-            {/* Left Sub-Group: BEST COUNTERS */}
-            <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
-              <span className="flex-shrink-0 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-emerald-400 uppercase">
-                BEST COUNTERS:
-              </span>
+          {/* 2-Column Tactical Intel Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1 border-t border-slate-800/50">
+            {/* ===================================================== */}
+            {/* LEFT COLUMN: 🟢 POSITIVE / PICK RECOMMENDATIONS       */}
+            {/* ===================================================== */}
+            <div className="flex flex-col gap-1.5 bg-slate-900/40 border border-emerald-500/20 rounded-lg p-2">
+              <div className="flex items-center justify-between pb-1 border-b border-slate-800/60">
+                <div className="flex items-center gap-1.5 font-hud font-bold text-[10.5px] uppercase tracking-wider text-emerald-400">
+                  <ThumbsUp className="h-3 w-3 text-emerald-400 flex-shrink-0" />
+                  <span>POSITIVE RECOMMENDATIONS</span>
+                </div>
+                <span className="text-[9px] text-slate-500 font-medium">
+                  {activeRankOption.badgeLabel}
+                </span>
+              </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {topCounters.map(({ hero, badgeScore, tooltip }) => (
-                  <button
-                    key={`rec-counter-${hero.id}`}
-                    type="button"
-                    onClick={() => handleHeroChipClick(hero)}
-                    className="relative group h-7.5 w-7.5 sm:h-8 sm:w-8 rounded-full overflow-visible flex-shrink-0 transition-transform duration-150 hover:scale-110 active:scale-95 cursor-pointer"
-                    title={`${hero.name} — ${tooltip} (Click to draft into ${activeSlotTarget.label})`}
-                  >
-                    <div className="h-full w-full rounded-full overflow-hidden border border-emerald-500/70 hover:border-emerald-400 bg-slate-900 shadow-sm ring-1 ring-emerald-500/25">
-                      <HeroAvatar hero={hero} variant="icon" />
-                      <div className="absolute inset-0 rounded-full bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                    </div>
-                    <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-emerald-950/95 text-emerald-300 border border-emerald-500/80 rounded-full text-[8.5px] font-hud font-bold leading-none shadow z-10">
-                      {badgeScore}
-                    </span>
-                  </button>
-                ))}
-                {topCounters.length === 0 && (
-                  <span className="text-slate-500 text-[10px] italic">
-                    {opposingLocked.length === 0 ? 'Awaiting opponent picks' : 'No direct counters found'}
+              {/* 1. Advantage vs Enemy (Best Counters) */}
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-[9.5px] font-hud font-bold text-slate-300 uppercase tracking-wide">
+                  <span className="flex items-center gap-1 text-emerald-300">
+                    <Swords className="h-2.5 w-2.5 text-emerald-400" />
+                    <span>Advantage vs Enemy (Best Counters)</span>
                   </span>
-                )}
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {tacticalColumns.bestCounters.map((item) => (
+                    <button
+                      key={`col-counter-${item.hero.id}`}
+                      type="button"
+                      onClick={() => !item.isUnavailable && handleHeroChipClick(item.hero)}
+                      disabled={item.isUnavailable}
+                      className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg border transition ${
+                        item.isUnavailable
+                          ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
+                          : 'bg-slate-900/90 border-emerald-500/50 hover:border-emerald-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                      }`}
+                      title={item.tooltip}
+                    >
+                      {/* Candidate Avatar with Score Badge */}
+                      <div className="relative h-6 w-6 rounded-full flex-shrink-0">
+                        <div className="h-full w-full rounded-full overflow-hidden border border-emerald-500/70 bg-slate-900">
+                          <img
+                            src={item.hero.avatar}
+                            alt={item.hero.name}
+                            className={`h-full w-full object-cover ${item.isUnavailable ? 'grayscale' : ''}`}
+                          />
+                        </div>
+                        <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-emerald-950/95 text-emerald-300 border border-emerald-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                          {item.badgeScore}
+                        </span>
+                        {item.statusBadge && (
+                          <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
+                            {item.statusBadge === 'BANNED' ? '🚫' : '🔒'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Candidate Name */}
+                      <span className="font-hud font-bold text-[10px] text-slate-200">
+                        {item.hero.name}
+                      </span>
+
+                      {/* Attribution Target */}
+                      {item.targetHero && (
+                        <div className="flex items-center gap-1 pl-0.5 border-l border-slate-700/80 text-[8.5px] text-slate-400">
+                          <ArrowRight className="h-2.5 w-2.5 text-emerald-400/80" />
+                          <div className="h-4 w-4 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
+                            <img
+                              src={item.targetHero.avatar}
+                              alt={item.targetHero.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <span className="text-slate-300 font-semibold truncate max-w-[55px]">
+                            {item.targetHero.name}
+                          </span>
+                        </div>
+                      )}
+                    </button>
+                  ))}
+
+                  {tacticalColumns.bestCounters.length === 0 && (
+                    <span className="text-slate-500 text-[10px] italic py-0.5">
+                      {opposingLocked.length === 0 ? 'Awaiting opponent locks' : 'No direct lane counters recorded'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* 2. Best Teammates (Compatible) */}
+              <div className="flex flex-col gap-1 pt-1 border-t border-slate-800/40">
+                <div className="flex items-center justify-between text-[9.5px] font-hud font-bold text-slate-300 uppercase tracking-wide">
+                  <span className="flex items-center gap-1 text-cyan-300">
+                    <Users className="h-2.5 w-2.5 text-cyan-400" />
+                    <span>Best Teammates (Compatible)</span>
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {tacticalColumns.bestTeammates.map((item) => (
+                    <button
+                      key={`col-compat-${item.hero.id}`}
+                      type="button"
+                      onClick={() => !item.isUnavailable && handleHeroChipClick(item.hero)}
+                      disabled={item.isUnavailable}
+                      className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg border transition ${
+                        item.isUnavailable
+                          ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
+                          : 'bg-slate-900/90 border-cyan-500/50 hover:border-cyan-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                      }`}
+                      title={item.tooltip}
+                    >
+                      {/* Candidate Avatar with Score Badge */}
+                      <div className="relative h-6 w-6 rounded-full flex-shrink-0">
+                        <div className="h-full w-full rounded-full overflow-hidden border border-cyan-500/70 bg-slate-900">
+                          <img
+                            src={item.hero.avatar}
+                            alt={item.hero.name}
+                            className={`h-full w-full object-cover ${item.isUnavailable ? 'grayscale' : ''}`}
+                          />
+                        </div>
+                        <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-cyan-950/95 text-cyan-300 border border-cyan-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                          {item.badgeScore}
+                        </span>
+                        {item.statusBadge && (
+                          <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
+                            {item.statusBadge === 'BANNED' ? '🚫' : '🔒'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Candidate Name */}
+                      <span className="font-hud font-bold text-[10px] text-slate-200">
+                        {item.hero.name}
+                      </span>
+
+                      {/* Attribution Target */}
+                      {item.targetHero && (
+                        <div className="flex items-center gap-1 pl-0.5 border-l border-slate-700/80 text-[8.5px] text-slate-400">
+                          <ArrowRight className="h-2.5 w-2.5 text-cyan-400/80" />
+                          <div className="h-4 w-4 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
+                            <img
+                              src={item.targetHero.avatar}
+                              alt={item.targetHero.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <span className="text-slate-300 font-semibold truncate max-w-[55px]">
+                            {item.targetHero.name}
+                          </span>
+                        </div>
+                      )}
+                    </button>
+                  ))}
+
+                  {tacticalColumns.bestTeammates.length === 0 && (
+                    <span className="text-slate-500 text-[10px] italic py-0.5">
+                      {targetLocked.length === 0 ? 'Awaiting team locks' : 'No compatible lane synergies found'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Right Sub-Group: COMPATIBLE */}
-            <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
-              <span className="flex-shrink-0 text-[10px] sm:text-xs font-hud font-bold tracking-wider text-cyan-400 uppercase">
-                COMPATIBLE:
-              </span>
+            {/* ===================================================== */}
+            {/* RIGHT COLUMN: 🔴 RISK WARNINGS / AVOID               */}
+            {/* ===================================================== */}
+            <div className="flex flex-col gap-1.5 bg-slate-900/40 border border-rose-500/20 rounded-lg p-2">
+              <div className="flex items-center justify-between pb-1 border-b border-slate-800/60">
+                <div className="flex items-center gap-1.5 font-hud font-bold text-[10.5px] uppercase tracking-wider text-rose-400">
+                  <ShieldAlert className="h-3 w-3 text-rose-400 flex-shrink-0" />
+                  <span>RISK WARNINGS & AVOID</span>
+                </div>
+                <span className="text-[9px] text-slate-500 font-medium">
+                  {activeRankOption.badgeLabel}
+                </span>
+              </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {topCompatible.map(({ hero, badgeScore, tooltip }) => (
-                  <button
-                    key={`rec-compat-${hero.id}`}
-                    type="button"
-                    onClick={() => handleHeroChipClick(hero)}
-                    className="relative group h-7.5 w-7.5 sm:h-8 sm:w-8 rounded-full overflow-visible flex-shrink-0 transition-transform duration-150 hover:scale-110 active:scale-95 cursor-pointer"
-                    title={`${hero.name} — ${tooltip} (Click to draft into ${activeSlotTarget.label})`}
-                  >
-                    <div className="h-full w-full rounded-full overflow-hidden border border-cyan-500/70 hover:border-cyan-400 bg-slate-900 shadow-sm ring-1 ring-cyan-500/25">
-                      <HeroAvatar hero={hero} variant="icon" />
-                      <div className="absolute inset-0 rounded-full bg-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                    </div>
-                    <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-cyan-950/95 text-cyan-300 border border-cyan-500/80 rounded-full text-[8.5px] font-hud font-bold leading-none shadow z-10">
-                      {badgeScore}
-                    </span>
-                  </button>
-                ))}
-                {topCompatible.length === 0 && (
-                  <span className="text-slate-500 text-[10px] italic">
-                    {targetLocked.length === 0 ? 'Awaiting team picks' : 'No synergies found'}
+              {/* 3. Weak Against Enemy (Most Countered By) */}
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-[9.5px] font-hud font-bold text-slate-300 uppercase tracking-wide">
+                  <span className="flex items-center gap-1 text-rose-300">
+                    <Swords className="h-2.5 w-2.5 text-rose-400" />
+                    <span>Weak Against Enemy (Countered By)</span>
                   </span>
-                )}
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {tacticalColumns.weakAgainst.map((item) => (
+                    <button
+                      key={`col-weak-${item.hero.id}`}
+                      type="button"
+                      onClick={() => !item.isUnavailable && handleHeroChipClick(item.hero)}
+                      disabled={item.isUnavailable}
+                      className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg border transition ${
+                        item.isUnavailable
+                          ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
+                          : 'bg-slate-900/90 border-rose-500/50 hover:border-rose-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                      }`}
+                      title={item.tooltip}
+                    >
+                      {/* Candidate Avatar with Score Badge */}
+                      <div className="relative h-6 w-6 rounded-full flex-shrink-0">
+                        <div className="h-full w-full rounded-full overflow-hidden border border-rose-500/70 bg-slate-900">
+                          <img
+                            src={item.hero.avatar}
+                            alt={item.hero.name}
+                            className={`h-full w-full object-cover ${item.isUnavailable ? 'grayscale' : ''}`}
+                          />
+                        </div>
+                        <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-rose-950/95 text-rose-300 border border-rose-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                          {item.badgeScore}
+                        </span>
+                        {item.statusBadge && (
+                          <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
+                            {item.statusBadge === 'BANNED' ? '🚫' : '🔒'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Candidate Name */}
+                      <span className="font-hud font-bold text-[10px] text-slate-200">
+                        {item.hero.name}
+                      </span>
+
+                      {/* Attribution Target */}
+                      {item.targetHero && (
+                        <div className="flex items-center gap-1 pl-0.5 border-l border-slate-700/80 text-[8.5px] text-slate-400">
+                          <ArrowRight className="h-2.5 w-2.5 text-rose-400/80" />
+                          <div className="h-4 w-4 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
+                            <img
+                              src={item.targetHero.avatar}
+                              alt={item.targetHero.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <span className="text-slate-300 font-semibold truncate max-w-[55px]">
+                            {item.targetHero.name}
+                          </span>
+                        </div>
+                      )}
+                    </button>
+                  ))}
+
+                  {tacticalColumns.weakAgainst.length === 0 && (
+                    <span className="text-slate-500 text-[10px] italic py-0.5">
+                      {opposingLocked.length === 0 ? 'Awaiting opponent locks' : 'No major lane vulnerabilities detected'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* 4. Poor Compatibility (Not Compatible) */}
+              <div className="flex flex-col gap-1 pt-1 border-t border-slate-800/40">
+                <div className="flex items-center justify-between text-[9.5px] font-hud font-bold text-slate-300 uppercase tracking-wide">
+                  <span className="flex items-center gap-1 text-amber-300">
+                    <ThumbsDown className="h-2.5 w-2.5 text-amber-400" />
+                    <span>Poor Compatibility (Low Synergy)</span>
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {tacticalColumns.poorCompatibility.map((item) => (
+                    <button
+                      key={`col-poor-${item.hero.id}`}
+                      type="button"
+                      onClick={() => !item.isUnavailable && handleHeroChipClick(item.hero)}
+                      disabled={item.isUnavailable}
+                      className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg border transition ${
+                        item.isUnavailable
+                          ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
+                          : 'bg-slate-900/90 border-amber-500/50 hover:border-amber-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                      }`}
+                      title={item.tooltip}
+                    >
+                      {/* Candidate Avatar with Score Badge */}
+                      <div className="relative h-6 w-6 rounded-full flex-shrink-0">
+                        <div className="h-full w-full rounded-full overflow-hidden border border-amber-500/70 bg-slate-900">
+                          <img
+                            src={item.hero.avatar}
+                            alt={item.hero.name}
+                            className={`h-full w-full object-cover ${item.isUnavailable ? 'grayscale' : ''}`}
+                          />
+                        </div>
+                        <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-amber-950/95 text-amber-300 border border-amber-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                          {item.badgeScore}
+                        </span>
+                        {item.statusBadge && (
+                          <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
+                            {item.statusBadge === 'BANNED' ? '🚫' : '🔒'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Candidate Name */}
+                      <span className="font-hud font-bold text-[10px] text-slate-200">
+                        {item.hero.name}
+                      </span>
+
+                      {/* Attribution Target */}
+                      {item.targetHero && (
+                        <div className="flex items-center gap-1 pl-0.5 border-l border-slate-700/80 text-[8.5px] text-slate-400">
+                          <ArrowRight className="h-2.5 w-2.5 text-amber-400/80" />
+                          <div className="h-4 w-4 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
+                            <img
+                              src={item.targetHero.avatar}
+                              alt={item.targetHero.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <span className="text-slate-300 font-semibold truncate max-w-[55px]">
+                            {item.targetHero.name}
+                          </span>
+                        </div>
+                      )}
+                    </button>
+                  ))}
+
+                  {tacticalColumns.poorCompatibility.length === 0 && (
+                    <span className="text-slate-500 text-[10px] italic py-0.5">
+                      {targetLocked.length === 0 ? 'Awaiting team locks' : 'No major lineup clashes identified'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

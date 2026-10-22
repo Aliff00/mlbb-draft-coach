@@ -56,6 +56,7 @@ export const HeroGrid: React.FC = () => {
     laneFilter,
     searchQuery,
     mapSynergyOnly,
+    rankTier,
     placeHero,
     setRoleFilter,
     setLaneFilter,
@@ -167,12 +168,14 @@ export const HeroGrid: React.FC = () => {
 
         enemyPicks.forEach((enemy) => {
           const enemyMeta = metaMap.get(Number(enemy.id));
+          const hMetrics = (h as any).ranks?.[rankTier] || h;
+          const eMetrics = (enemyMeta as any)?.ranks?.[rankTier] || enemyMeta;
 
-          const matchInH = (h.best_counters || []).find(
-            (b) => b.id === Number(enemy.id) || b.slug === enemy.slug
+          const matchInH = (hMetrics.best_counters || []).find(
+            (b: any) => b.id === Number(enemy.id) || b.hero_id === Number(enemy.id) || b.slug === enemy.slug
           );
-          const matchInE = (enemyMeta?.countered_by || []).find(
-            (b) => b.id === h.id || b.slug === h.slug
+          const matchInE = (eMetrics?.countered_by || []).find(
+            (b: any) => b.id === h.id || b.hero_id === h.id || b.slug === h.slug
           );
           const delta = matchInH?.counter_score ?? matchInE?.counter_score;
           if (delta && delta > 0) {
@@ -204,8 +207,11 @@ export const HeroGrid: React.FC = () => {
         let sScore = 0;
         allyPicks.forEach((ally) => {
           const allyMeta = metaMap.get(Number(ally.id));
-          const compatList = (h as any).most_compatible || h.synergies || [];
-          const allyCompatList = (allyMeta as any)?.most_compatible || allyMeta?.synergies || [];
+          const hMetrics = (h as any).ranks?.[rankTier] || h;
+          const aMetrics = (allyMeta as any)?.ranks?.[rankTier] || allyMeta;
+
+          const compatList = hMetrics.most_compatible || hMetrics.synergies || [];
+          const allyCompatList = aMetrics?.most_compatible || aMetrics?.synergies || [];
 
           const matchInH = compatList.find(
             (s: any) => s.id === Number(ally.id) || s.hero_id === Number(ally.id) || s.slug === ally.slug
@@ -232,7 +238,7 @@ export const HeroGrid: React.FC = () => {
       topCounterHeroIds: new Set(counterScored.slice(0, 4).map((c) => String(c.id))),
       topSynergyHeroIds: new Set(synergyScored.slice(0, 3).map((s) => String(s.id))),
     };
-  }, [activeSlot, bluePicks, redPicks, unavailableHeroIds]);
+  }, [activeSlot, bluePicks, redPicks, unavailableHeroIds, rankTier]);
 
   return (
     <section className="flex flex-col h-full min-h-0 rounded-none bg-transparent gap-1.5 p-0">

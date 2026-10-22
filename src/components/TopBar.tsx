@@ -5,12 +5,14 @@ import {
   Check,
   ChevronDown,
   RotateCcw,
+  Trophy,
   X,
 } from 'lucide-react';
 import { useDraftStore } from '../store/useDraftStore';
 import {
   MAP_EFFECTS_CONFIG,
   MapTraitType,
+  RANK_TIER_OPTIONS,
   TeamSide,
 } from '../types/draft';
 import { CommandTray } from './CommandTray';
@@ -48,12 +50,15 @@ export const TopBar: React.FC = () => {
     draggedSlot,
     setDraggedHero,
     setDraggedSlot,
+    rankTier,
+    setRankTier,
   } = useDraftStore();
 
   const [dragOverBan, setDragOverBan] = useState<string | null>(null);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [isMapDropdownOpen, setIsMapDropdownOpen] = useState(false);
+  const [isRankDropdownOpen, setIsRankDropdownOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
   const [isCommandTrayOpen, setIsCommandTrayOpen] = useState(false);
@@ -336,71 +341,143 @@ export const TopBar: React.FC = () => {
                 </div>
               </button>
 
-              {/* 2. Map Trait Dropdown: Centered below the App Name */}
-              <div className="relative mt-1">
-                <button
-                  type="button"
-                  onClick={() => setIsMapDropdownOpen((prev) => !prev)}
-                  className={`flex items-center gap-1.5 rounded-full border px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-hud font-bold uppercase tracking-wider transition cursor-pointer select-none ${mapTheme.tagBg} ${mapTheme.glow} shadow-sm hover:border-amber-400/60`}
-                  title={`Map Trait: ${mapConfig.name} — Click to change battlefield conditions`}
-                >
-                  <MapEffectIcon effect={mapTrait} className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  <span className="truncate max-w-[120px] sm:max-w-none">
-                    {mapConfig.shortName}
-                  </span>
-                  <ChevronDown
-                    className={`h-3 w-3 opacity-80 transition-transform duration-200 ${
-                      isMapDropdownOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-
-                {/* Map Trait Popover Menu */}
-                {isMapDropdownOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setIsMapDropdownOpen(false)}
+              {/* 2. Battlefield Trait & Competitive Rank Tier Selectors */}
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-1">
+                {/* Map Trait Dropdown */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMapDropdownOpen((prev) => !prev);
+                      setIsRankDropdownOpen(false);
+                    }}
+                    className={`flex items-center gap-1.5 rounded-full border px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-hud font-bold uppercase tracking-wider transition cursor-pointer select-none ${mapTheme.tagBg} ${mapTheme.glow} shadow-sm hover:border-amber-400/60`}
+                    title={`Map Trait: ${mapConfig.name} — Click to change battlefield conditions`}
+                  >
+                    <MapEffectIcon effect={mapTrait} className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    <span className="truncate max-w-[120px] sm:max-w-none">
+                      {mapConfig.shortName}
+                    </span>
+                    <ChevronDown
+                      className={`h-3 w-3 opacity-80 transition-transform duration-200 ${
+                        isMapDropdownOpen ? 'rotate-180' : ''
+                      }`}
                     />
-                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-72 rounded-xl border border-slate-700 bg-slate-950/95 p-2 shadow-2xl backdrop-blur-md z-50 text-left">
-                      <div className="text-[10px] font-hud font-bold uppercase tracking-wider text-slate-400 pb-1.5 mb-1 border-b border-slate-800">
-                        Select Battlefield Map Trait
+                  </button>
+
+                  {/* Map Trait Popover Menu */}
+                  {isMapDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsMapDropdownOpen(false)}
+                      />
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-72 rounded-xl border border-slate-700 bg-slate-950/95 p-2 shadow-2xl backdrop-blur-md z-50 text-left">
+                        <div className="text-[10px] font-hud font-bold uppercase tracking-wider text-slate-400 pb-1.5 mb-1 border-b border-slate-800">
+                          Select Battlefield Map Trait
+                        </div>
+                        <div className="flex flex-col gap-1 font-hud">
+                          {MAP_TRAITS.map((item) => {
+                            const cfg = MAP_EFFECTS_CONFIG[item.id];
+                            const isSelected = mapTrait === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => {
+                                  setMapTrait(item.id);
+                                  setIsMapDropdownOpen(false);
+                                }}
+                                className={`flex flex-col gap-0.5 p-2 rounded-lg text-left transition cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-amber-500/20 border border-amber-400/60 text-amber-200'
+                                    : 'hover:bg-slate-900 border border-transparent text-slate-300 hover:text-white'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between text-xs font-bold">
+                                  <span className="flex items-center gap-1.5">
+                                    <MapEffectIcon effect={item.id} className="h-3.5 w-3.5" />
+                                    {cfg.name}
+                                  </span>
+                                  {isSelected && <Check className="h-3.5 w-3.5 text-amber-400" />}
+                                </div>
+                                <span className="text-[9.5px] text-slate-400 leading-tight">
+                                  {cfg.tacticalTip}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="flex flex-col gap-1 font-hud">
-                        {MAP_TRAITS.map((item) => {
-                          const cfg = MAP_EFFECTS_CONFIG[item.id];
-                          const isSelected = mapTrait === item.id;
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => {
-                                setMapTrait(item.id);
-                                setIsMapDropdownOpen(false);
-                              }}
-                              className={`flex flex-col gap-0.5 p-2 rounded-lg text-left transition cursor-pointer ${
-                                isSelected
-                                  ? 'bg-amber-500/20 border border-amber-400/60 text-amber-200'
-                                  : 'hover:bg-slate-900 border border-transparent text-slate-300 hover:text-white'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between text-xs font-bold">
+                    </>
+                  )}
+                </div>
+
+                {/* Rank Tier Dropdown: [ 🏆 {rankTier} ▾ ] */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRankDropdownOpen((prev) => !prev);
+                      setIsMapDropdownOpen(false);
+                    }}
+                    className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-950/30 text-amber-300 hover:text-amber-200 px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-hud font-bold uppercase tracking-wider transition cursor-pointer select-none shadow-sm hover:border-amber-400 hover:bg-amber-900/40"
+                    title={`Rank Tier Telemetry: ${
+                      RANK_TIER_OPTIONS.find((t) => t.key === rankTier)?.label || 'Mythical Glory+'
+                    } — Updates recommendation scoring & win rates`}
+                  >
+                    <Trophy className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-400" />
+                    <span className="truncate max-w-[110px] sm:max-w-none">
+                      {RANK_TIER_OPTIONS.find((t) => t.key === rankTier)?.label || 'Mythical Glory+'}
+                    </span>
+                    <ChevronDown
+                      className={`h-3 w-3 opacity-80 transition-transform duration-200 ${
+                        isRankDropdownOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {/* Rank Tier Popover Menu */}
+                  {isRankDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsRankDropdownOpen(false)}
+                      />
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-48 rounded-xl border border-slate-700 bg-slate-950/95 p-1.5 shadow-2xl backdrop-blur-md z-50 text-left">
+                        <div className="text-[10px] font-hud font-bold uppercase tracking-wider text-slate-400 px-2 py-1 mb-1 border-b border-slate-800">
+                          Rank Tier Telemetry
+                        </div>
+                        <div className="flex flex-col gap-0.5 font-hud">
+                          {RANK_TIER_OPTIONS.map((tier) => {
+                            const isSelected = rankTier === tier.key;
+                            return (
+                              <button
+                                key={tier.key}
+                                type="button"
+                                onClick={() => {
+                                  setRankTier(tier.key);
+                                  setIsRankDropdownOpen(false);
+                                }}
+                                className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-amber-500/20 border border-amber-400/60 text-amber-200'
+                                    : 'hover:bg-slate-900 border border-transparent text-slate-300 hover:text-white'
+                                }`}
+                              >
                                 <span className="flex items-center gap-1.5">
-                                  <MapEffectIcon effect={item.id} className="h-3.5 w-3.5" />
-                                  {cfg.name}
+                                  <Trophy className="h-3.5 w-3.5 text-amber-400/80" />
+                                  {tier.label}
                                 </span>
                                 {isSelected && <Check className="h-3.5 w-3.5 text-amber-400" />}
-                              </div>
-                              <span className="text-[9.5px] text-slate-400 leading-tight">
-                                {cfg.tacticalTip}
-                              </span>
-                            </button>
-                          );
-                        })}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 

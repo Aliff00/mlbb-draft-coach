@@ -75,9 +75,199 @@ const KNOWN_TRUE_DAMAGE_SLUGS = new Set([
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const OFFICIAL_RANK_TIERS = [
+  { key: 'mythical_glory', label: 'Mythical Glory+', bigrank: '9' },
+  { key: 'mythical_honor', label: 'Mythical Honor', bigrank: '8' },
+  { key: 'mythic', label: 'Mythic', bigrank: '7' },
+  { key: 'legend', label: 'Legend', bigrank: '6' },
+  { key: 'all_ranks', label: 'All Ranks', bigrank: '101' },
+];
+
 function calcRatingScore(deltaWinRate) {
   const d = Math.abs(Number(deltaWinRate) || 0);
   return Math.min(99, Math.max(60, Math.round(75 + d * 380)));
+}
+
+function extractRankMetrics(
+  rankEnemy,
+  rankTeammate,
+  heroIdentityById,
+  curatedCounters,
+  curatedCounteredBy,
+  curatedSynergies
+) {
+  const rawWinRate = rankEnemy?.main_hero_win_rate ?? 0.5;
+  const rawPickRate = rankEnemy?.main_hero_appearance_rate ?? 0.01;
+  const rawBanRate = rankEnemy?.main_hero_ban_rate ?? 0.0;
+
+  const win_rate = Number((rawWinRate * 100).toFixed(2));
+  const pick_rate = Number((rawPickRate * 100).toFixed(2));
+  const ban_rate = Number((rawBanRate * 100).toFixed(2));
+
+  // 1. Best Counters
+  const best_counters = [];
+  if (Array.isArray(rankEnemy?.sub_hero) && rankEnemy.sub_hero.length > 0) {
+    for (const sub of rankEnemy.sub_hero.slice(0, 5)) {
+      const tid = Number(sub?.heroid);
+      if (!tid) continue;
+      const targetMeta = heroIdentityById.get(tid);
+      const delta = Number(sub?.increase_win_rate ?? 0);
+      const score = calcRatingScore(delta);
+      const wr = Number(((sub?.hero_win_rate ?? rawWinRate) * 100).toFixed(2));
+      best_counters.push({
+        hero_id: tid,
+        id: tid,
+        name: targetMeta?.name || sub?.hero?.data?.name || `Hero ${tid}`,
+        slug: targetMeta?.slug || slugify(sub?.hero?.data?.name || `hero-${tid}`),
+        avatar: targetMeta?.avatar || `/heroes/${tid}-icon.webp`,
+        counter_score: score,
+        win_rate: wr,
+        delta_score: Number((delta * 100).toFixed(2)),
+      });
+    }
+  }
+  if (best_counters.length === 0) {
+    for (const rel of curatedCounters.slice(0, 5)) {
+      best_counters.push({
+        hero_id: rel.id,
+        id: rel.id,
+        name: rel.name,
+        slug: rel.slug,
+        avatar: rel.avatar,
+        counter_score: 82,
+        win_rate: 52.5,
+        delta_score: 2.5,
+      });
+    }
+  }
+
+  // 2. Countered By
+  const countered_by = [];
+  if (Array.isArray(rankEnemy?.sub_hero_last) && rankEnemy.sub_hero_last.length > 0) {
+    for (const sub of rankEnemy.sub_hero_last.slice(0, 5)) {
+      const tid = Number(sub?.heroid);
+      if (!tid) continue;
+      const targetMeta = heroIdentityById.get(tid);
+      const delta = Number(sub?.increase_win_rate ?? 0);
+      const score = calcRatingScore(delta);
+      const wr = Number(((sub?.hero_win_rate ?? rawWinRate) * 100).toFixed(2));
+      countered_by.push({
+        hero_id: tid,
+        id: tid,
+        name: targetMeta?.name || sub?.hero?.data?.name || `Hero ${tid}`,
+        slug: targetMeta?.slug || slugify(sub?.hero?.data?.name || `hero-${tid}`),
+        avatar: targetMeta?.avatar || `/heroes/${tid}-icon.webp`,
+        counter_score: score,
+        win_rate: wr,
+        delta_score: Number((delta * 100).toFixed(2)),
+      });
+    }
+  }
+  if (countered_by.length === 0) {
+    for (const rel of curatedCounteredBy.slice(0, 5)) {
+      countered_by.push({
+        hero_id: rel.id,
+        id: rel.id,
+        name: rel.name,
+        slug: rel.slug,
+        avatar: rel.avatar,
+        counter_score: 80,
+        win_rate: 47.5,
+        delta_score: -2.5,
+      });
+    }
+  }
+
+  // 3. Most Compatible
+  const most_compatible = [];
+  const teamSubHeroes = rankTeammate?.sub_hero || rankEnemy?.sub_hero;
+  if (Array.isArray(teamSubHeroes) && teamSubHeroes.length > 0) {
+    for (const sub of teamSubHeroes.slice(0, 5)) {
+      const tid = Number(sub?.heroid);
+      if (!tid) continue;
+      const targetMeta = heroIdentityById.get(tid);
+      const delta = Number(sub?.increase_win_rate ?? 0);
+      const score = calcRatingScore(delta);
+      const wr = Number(((sub?.hero_win_rate ?? rawWinRate) * 100).toFixed(2));
+      most_compatible.push({
+        hero_id: tid,
+        id: tid,
+        name: targetMeta?.name || sub?.hero?.data?.name || `Hero ${tid}`,
+        slug: targetMeta?.slug || slugify(sub?.hero?.data?.name || `hero-${tid}`),
+        avatar: targetMeta?.avatar || `/heroes/${tid}-icon.webp`,
+        compatibility_score: score,
+        counter_score: score,
+        win_rate: wr,
+        delta_score: Number((delta * 100).toFixed(2)),
+      });
+    }
+  }
+  if (most_compatible.length === 0) {
+    for (const rel of curatedSynergies.slice(0, 5)) {
+      most_compatible.push({
+        hero_id: rel.id,
+        id: rel.id,
+        name: rel.name,
+        slug: rel.slug,
+        avatar: rel.avatar,
+        compatibility_score: 82,
+        counter_score: 82,
+        win_rate: 53.0,
+        delta_score: 3.0,
+      });
+    }
+  }
+
+  // 4. Least Compatible
+  const least_compatible = [];
+  const teamSubHeroesLast = rankTeammate?.sub_hero_last || rankEnemy?.sub_hero_last;
+  if (Array.isArray(teamSubHeroesLast) && teamSubHeroesLast.length > 0) {
+    for (const sub of teamSubHeroesLast.slice(0, 5)) {
+      const tid = Number(sub?.heroid);
+      if (!tid) continue;
+      const targetMeta = heroIdentityById.get(tid);
+      const delta = Number(sub?.increase_win_rate ?? 0);
+      const score = calcRatingScore(delta);
+      const wr = Number(((sub?.hero_win_rate ?? rawWinRate) * 100).toFixed(2));
+      least_compatible.push({
+        hero_id: tid,
+        id: tid,
+        name: targetMeta?.name || sub?.hero?.data?.name || `Hero ${tid}`,
+        slug: targetMeta?.slug || slugify(sub?.hero?.data?.name || `hero-${tid}`),
+        avatar: targetMeta?.avatar || `/heroes/${tid}-icon.webp`,
+        compatibility_score: score,
+        counter_score: score,
+        win_rate: wr,
+        delta_score: Number((delta * 100).toFixed(2)),
+      });
+    }
+  }
+  if (least_compatible.length === 0) {
+    for (const rel of curatedCounters.slice(0, 5)) {
+      least_compatible.push({
+        hero_id: rel.id,
+        id: rel.id,
+        name: rel.name,
+        slug: rel.slug,
+        avatar: rel.avatar,
+        compatibility_score: 72,
+        counter_score: 72,
+        win_rate: 46.0,
+        delta_score: -4.0,
+      });
+    }
+  }
+
+  return {
+    win_rate,
+    pick_rate,
+    ban_rate,
+    best_counters,
+    countered_by,
+    most_compatible,
+    least_compatible,
+    synergies: most_compatible,
+  };
 }
 
 function slugify(name) {
@@ -342,25 +532,25 @@ async function main() {
     console.warn('⚠️ Failed to fetch GMS list:', err.message);
   }
 
-  // 3. Fetch Official Moonton GMS Competitive Rank & Matchup Telemetry (Mythical Glory+, 7-day default)
-  console.log(`📡 Fetching Mythical Glory+ competitive rank & matchup telemetry (7-Day window)...`);
-  let rankTelemetry = await fetchGmsRankTelemetry(OFFICIAL_GMS_RANK_7D_URL, '9');
-  let selectedWindow = '7d';
+  // 3. Fetch Official Moonton GMS Competitive Rank & Matchup Telemetry for All Tiers
+  const tierTelemetryMap = new Map();
+  for (const tier of OFFICIAL_RANK_TIERS) {
+    console.log(`📡 Fetching competitive telemetry for ${tier.label} (bigrank: ${tier.bigrank})...`);
+    let t = await fetchGmsRankTelemetry(OFFICIAL_GMS_RANK_7D_URL, tier.bigrank);
+    if (t.enemyMap.size === 0) {
+      console.log(`🔄 7-day data unavailable for ${tier.label}, trying 15-day window...`);
+      t = await fetchGmsRankTelemetry(OFFICIAL_GMS_RANK_15D_URL, tier.bigrank);
+    }
+    if (t.enemyMap.size === 0) {
+      console.log(`🔄 15-day data unavailable for ${tier.label}, falling back to standard rank telemetry...`);
+      t = await fetchGmsRankTelemetry(OFFICIAL_GMS_RANK_ALL_URL, tier.bigrank);
+    }
+    tierTelemetryMap.set(tier.key, t);
+    console.log(`✅ Loaded ${t.enemyMap.size} heroes for ${tier.label}`);
+  }
 
-  // Fallback to 15-day or all-time if 7-day is empty
-  if (rankTelemetry.enemyMap.size === 0) {
-    console.log(`🔄 7-day data unavailable, trying 15-day window...`);
-    rankTelemetry = await fetchGmsRankTelemetry(OFFICIAL_GMS_RANK_15D_URL, '9');
-    selectedWindow = '15d';
-  }
-  if (rankTelemetry.enemyMap.size === 0) {
-    console.log(`🔄 15-day data unavailable, falling back to standard rank telemetry...`);
-    rankTelemetry = await fetchGmsRankTelemetry(OFFICIAL_GMS_RANK_ALL_URL, '9');
-    selectedWindow = 'latest';
-  }
-  console.log(
-    `✅ Loaded competitive telemetry for ${rankTelemetry.enemyMap.size} heroes (Rank: Mythical Glory+, Window: ${selectedWindow})`
-  );
+  const rankTelemetry = tierTelemetryMap.get('mythical_glory') || { enemyMap: new Map(), teammateMap: new Map() };
+  const selectedWindow = '7d';
 
   // Build master list of hero IDs
   const allHeroIds = Array.from(
@@ -446,15 +636,6 @@ async function main() {
     // Determine Normalized Damage Type (Physical / Magic / True)
     const damage_type = determineDamageType(slug, roles, specialties);
 
-    // High-Rank Competitive Stats (Mythical Glory+)
-    const rawWinRate = rankEnemy?.main_hero_win_rate ?? 0.5;
-    const rawPickRate = rankEnemy?.main_hero_appearance_rate ?? 0.01;
-    const rawBanRate = rankEnemy?.main_hero_ban_rate ?? 0.0;
-
-    const win_rate = Number((rawWinRate * 100).toFixed(2));
-    const pick_rate = Number((rawPickRate * 100).toFixed(2));
-    const ban_rate = Number((rawBanRate * 100).toFixed(2));
-
     // Curated fallback relations from GMS 2756564 / MAPI
     const resolveTargetList = (idArray, mapiFallbackObj) => {
       const ids = Array.isArray(idArray)
@@ -483,166 +664,32 @@ async function main() {
       mapiDetail?.counters?.best
     );
 
-    // 1. Best Counters (sub_hero from enemy matchup telemetry: heroes this hero counters, positive score)
-    const best_counters = [];
-    if (Array.isArray(rankEnemy?.sub_hero) && rankEnemy.sub_hero.length > 0) {
-      for (const sub of rankEnemy.sub_hero.slice(0, 5)) {
-        const tid = Number(sub?.heroid);
-        if (!tid) continue;
-        const targetMeta = heroIdentityById.get(tid);
-        const delta = Number((sub?.increase_win_rate ?? 0));
-        const score = calcRatingScore(delta);
-        const wr = Number(((sub?.hero_win_rate ?? rawWinRate) * 100).toFixed(2));
-        best_counters.push({
-          hero_id: tid,
-          id: tid,
-          name: targetMeta?.name || sub?.hero?.data?.name || `Hero ${tid}`,
-          slug: targetMeta?.slug || slugify(sub?.hero?.data?.name || `hero-${tid}`),
-          avatar: targetMeta?.avatar || `/heroes/${tid}-icon.webp`,
-          counter_score: score,
-          win_rate: wr,
-          delta_score: Number((delta * 100).toFixed(2)),
-        });
-      }
-    }
-    // Fallback if telemetry empty
-    if (best_counters.length === 0) {
-      for (const rel of curatedCounters.slice(0, 5)) {
-        best_counters.push({
-          hero_id: rel.id,
-          id: rel.id,
-          name: rel.name,
-          slug: rel.slug,
-          avatar: rel.avatar,
-          counter_score: 82,
-          win_rate: 52.5,
-          delta_score: 2.5,
-        });
-      }
+    // Multi-tier rank metrics (mythical_glory, mythical_honor, mythic, legend, all_ranks)
+    const ranks = {};
+    for (const tier of OFFICIAL_RANK_TIERS) {
+      const tData = tierTelemetryMap.get(tier.key);
+      const tEnemy = tData?.enemyMap?.get(hid);
+      const tTeammate = tData?.teammateMap?.get(hid);
+      ranks[tier.key] = extractRankMetrics(
+        tEnemy,
+        tTeammate,
+        heroIdentityById,
+        curatedCounters,
+        curatedCounteredBy,
+        curatedSynergies
+      );
     }
 
-    // 2. Countered By (sub_hero_last from enemy matchup telemetry: heroes that counter this hero)
-    const countered_by = [];
-    if (Array.isArray(rankEnemy?.sub_hero_last) && rankEnemy.sub_hero_last.length > 0) {
-      for (const sub of rankEnemy.sub_hero_last.slice(0, 5)) {
-        const tid = Number(sub?.heroid);
-        if (!tid) continue;
-        const targetMeta = heroIdentityById.get(tid);
-        const delta = Number((sub?.increase_win_rate ?? 0));
-        const score = calcRatingScore(delta);
-        const wr = Number(((sub?.hero_win_rate ?? rawWinRate) * 100).toFixed(2));
-        countered_by.push({
-          hero_id: tid,
-          id: tid,
-          name: targetMeta?.name || sub?.hero?.data?.name || `Hero ${tid}`,
-          slug: targetMeta?.slug || slugify(sub?.hero?.data?.name || `hero-${tid}`),
-          avatar: targetMeta?.avatar || `/heroes/${tid}-icon.webp`,
-          counter_score: score,
-          win_rate: wr,
-          delta_score: Number((delta * 100).toFixed(2)),
-        });
-      }
-    }
-    // Fallback if telemetry empty
-    if (countered_by.length === 0) {
-      for (const rel of curatedCounteredBy.slice(0, 5)) {
-        countered_by.push({
-          hero_id: rel.id,
-          id: rel.id,
-          name: rel.name,
-          slug: rel.slug,
-          avatar: rel.avatar,
-          counter_score: 80,
-          win_rate: 47.5,
-          delta_score: -2.5,
-        });
-      }
-    }
-
-    // 3. Most Compatible (sub_hero from teammate matchup telemetry: highly compatible teammates)
-    const most_compatible = [];
-    const teamSubHeroes = rankTeammate?.sub_hero || rankEnemy?.sub_hero;
-    if (Array.isArray(teamSubHeroes) && teamSubHeroes.length > 0) {
-      for (const sub of teamSubHeroes.slice(0, 5)) {
-        const tid = Number(sub?.heroid);
-        if (!tid) continue;
-        const targetMeta = heroIdentityById.get(tid);
-        const delta = Number((sub?.increase_win_rate ?? 0));
-        const score = calcRatingScore(delta);
-        const wr = Number(((sub?.hero_win_rate ?? rawWinRate) * 100).toFixed(2));
-        most_compatible.push({
-          hero_id: tid,
-          id: tid,
-          name: targetMeta?.name || sub?.hero?.data?.name || `Hero ${tid}`,
-          slug: targetMeta?.slug || slugify(sub?.hero?.data?.name || `hero-${tid}`),
-          avatar: targetMeta?.avatar || `/heroes/${tid}-icon.webp`,
-          compatibility_score: score,
-          counter_score: score,
-          win_rate: wr,
-          delta_score: Number((delta * 100).toFixed(2)),
-        });
-      }
-    }
-    // Fallback if telemetry empty
-    if (most_compatible.length === 0) {
-      for (const rel of curatedSynergies.slice(0, 5)) {
-        most_compatible.push({
-          hero_id: rel.id,
-          id: rel.id,
-          name: rel.name,
-          slug: rel.slug,
-          avatar: rel.avatar,
-          compatibility_score: 82,
-          counter_score: 82,
-          win_rate: 53.0,
-          delta_score: 3.0,
-        });
-      }
-    }
-
-    // 4. Least Compatible (sub_hero_last from teammate matchup telemetry: poorly compatible teammates)
-    const least_compatible = [];
-    const teamSubHeroesLast = rankTeammate?.sub_hero_last || rankEnemy?.sub_hero_last;
-    if (Array.isArray(teamSubHeroesLast) && teamSubHeroesLast.length > 0) {
-      for (const sub of teamSubHeroesLast.slice(0, 5)) {
-        const tid = Number(sub?.heroid);
-        if (!tid) continue;
-        const targetMeta = heroIdentityById.get(tid);
-        const delta = Number((sub?.increase_win_rate ?? 0));
-        const score = calcRatingScore(delta);
-        const wr = Number(((sub?.hero_win_rate ?? rawWinRate) * 100).toFixed(2));
-        least_compatible.push({
-          hero_id: tid,
-          id: tid,
-          name: targetMeta?.name || sub?.hero?.data?.name || `Hero ${tid}`,
-          slug: targetMeta?.slug || slugify(sub?.hero?.data?.name || `hero-${tid}`),
-          avatar: targetMeta?.avatar || `/heroes/${tid}-icon.webp`,
-          compatibility_score: score,
-          counter_score: score,
-          win_rate: wr,
-          delta_score: Number((delta * 100).toFixed(2)),
-        });
-      }
-    }
-    // Fallback if telemetry empty
-    if (least_compatible.length === 0) {
-      for (const rel of curatedCounters.slice(0, 5)) {
-        least_compatible.push({
-          hero_id: rel.id,
-          id: rel.id,
-          name: rel.name,
-          slug: rel.slug,
-          avatar: rel.avatar,
-          compatibility_score: 72,
-          counter_score: 72,
-          win_rate: 46.0,
-          delta_score: -4.0,
-        });
-      }
-    }
-
-    // Synergies alias for backwards compatibility
-    const synergies = most_compatible.map(m => ({ ...m, synergy_score: m.compatibility_score }));
+    // Default top-level metrics (Mythical Glory+) for backwards compatibility
+    const defaultRank = ranks.mythical_glory;
+    const win_rate = defaultRank.win_rate;
+    const pick_rate = defaultRank.pick_rate;
+    const ban_rate = defaultRank.ban_rate;
+    const best_counters = defaultRank.best_counters;
+    const countered_by = defaultRank.countered_by;
+    const most_compatible = defaultRank.most_compatible;
+    const least_compatible = defaultRank.least_compatible;
+    const synergies = most_compatible.map((m) => ({ ...m, synergy_score: m.compatibility_score }));
 
     // Counter tips
     const counterTips = {
@@ -775,6 +822,7 @@ async function main() {
       countered_by,
       most_compatible,
       least_compatible,
+      ranks,
       counterTips,
       skills,
       ratings,
@@ -797,6 +845,7 @@ async function main() {
       most_compatible,
       least_compatible,
       synergies,
+      ranks,
     });
 
     if ((i + 1) % 35 === 0 || i + 1 === allHeroIds.length) {
