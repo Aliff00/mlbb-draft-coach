@@ -935,7 +935,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
         <div className="flex flex-col gap-1.5 w-full animate-fadeIn">
           {/* Top Sub-Row: Slot Target Indicator (Left) & Comp Balance (Right) */}
           <div className="flex items-center justify-between w-full">
-            {/* Left: Slot Target Indicator Badge with Direct Opponent Tag */}
+            {/* Left: Slot Target Indicator Badge */}
             <div className="flex items-center gap-2">
               <div
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-hud font-bold uppercase tracking-wider shadow-sm border ${
@@ -947,15 +947,6 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                 <Target className="h-3 w-3 flex-shrink-0" />
                 <span>{activeSlotTarget.label}</span>
               </div>
-
-              {opposingLocked.length > 0 && (
-                <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700/80 text-[10px] font-hud text-slate-300 shadow-sm max-w-[320px] truncate">
-                  <span className="text-slate-500 flex-shrink-0">VS:</span>
-                  <span className="font-bold text-amber-300 truncate">
-                    {opposingLocked.map((h) => h.name).join(', ')}
-                  </span>
-                </span>
-              )}
             </div>
 
             {/* Right: Comp Balance Metric */}
