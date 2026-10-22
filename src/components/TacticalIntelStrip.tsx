@@ -972,7 +972,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                   {tacticalColumns.bestCounters.map((group) => (
                     <div
                       key={`grp-counter-${group.targetHero.id}`}
-                      className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm flex-wrap sm:flex-nowrap"
+                      className="flex items-center gap-2 flex-wrap py-0.5"
                     >
                       {/* Target Locked Enemy (Avatar only) */}
                       <button
@@ -1047,7 +1047,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                   {tacticalColumns.bestTeammates.map((group) => (
                     <div
                       key={`grp-compat-${group.targetHero.id}`}
-                      className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm flex-wrap sm:flex-nowrap"
+                      className="flex items-center gap-2 flex-wrap py-0.5"
                     >
                       {/* Target Locked Ally (Avatar only) */}
                       <button
@@ -1137,7 +1137,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                   {tacticalColumns.weakAgainst.map((group) => (
                     <div
                       key={`grp-weak-${group.targetHero.id}`}
-                      className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm flex-wrap sm:flex-nowrap"
+                      className="flex items-center gap-2 flex-wrap py-0.5"
                     >
                       {/* Target Locked Enemy (Avatar only) */}
                       <button
@@ -1212,7 +1212,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                   {tacticalColumns.poorCompatibility.map((group) => (
                     <div
                       key={`grp-poor-${group.targetHero.id}`}
-                      className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm flex-wrap sm:flex-nowrap"
+                      className="flex items-center gap-2 flex-wrap py-0.5"
                     >
                       {/* Target Locked Ally (Avatar only) */}
                       <button
