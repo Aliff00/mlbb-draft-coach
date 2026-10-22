@@ -179,25 +179,20 @@ export const TeamColumn: React.FC<TeamColumnProps> = ({ team }) => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent pointer-events-none" />
                 </div>
 
-                {/* Quick Action Hover Bar (Instant Clear) */}
-                <div
+                {/* Dedicated Small Remove (x) Button (Identical to Ban Hero Remove Button) */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearSlot('PICK', team, idx);
+                  }}
                   className={`absolute top-1.5 ${
-                    isBlue ? 'right-2' : 'left-2'
-                  } z-30 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}
+                    isBlue ? 'right-1.5' : 'left-1.5'
+                  } h-4 w-4 rounded-full bg-slate-950/90 border border-slate-700 text-slate-400 hover:text-white hover:bg-rose-600 hover:border-rose-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md z-30 cursor-pointer`}
+                  title="Remove hero from slot"
                 >
-                  {/* Instant Clear Button */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      clearSlot('PICK', team, idx);
-                    }}
-                    title="Clear hero from slot"
-                    className="flex h-5 w-5 items-center justify-center rounded-md border border-slate-700 bg-slate-900/90 text-slate-300 hover:border-rose-400 hover:bg-rose-500 hover:text-white shadow transition cursor-pointer"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
+                  <X className="h-2.5 w-2.5 stroke-[3]" />
+                </button>
 
                 {/* Label Area at the Bottom (Left-Aligned for both Red and Blue) */}
                 <div className="relative z-10 w-full flex items-baseline justify-start gap-1.5 sm:gap-2 pb-2 px-2.5 pointer-events-none text-left min-w-0">
