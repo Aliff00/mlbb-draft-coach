@@ -422,7 +422,7 @@ export const TopBar: React.FC = () => {
                       setIsMapDropdownOpen(false);
                     }}
                     className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-950/30 text-amber-300 hover:text-amber-200 px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-hud font-bold uppercase tracking-wider transition cursor-pointer select-none shadow-sm hover:border-amber-400 hover:bg-amber-900/40"
-                    title={`Rank Tier Telemetry: ${
+                    title={`Rank Tier: ${
                       RANK_TIER_OPTIONS.find((t) => t.key === rankTier)?.label || 'Mythical Glory+'
                     } — Updates recommendation scoring & win rates`}
                   >
@@ -446,7 +446,7 @@ export const TopBar: React.FC = () => {
                       />
                       <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-48 rounded-xl border border-slate-700 bg-slate-950/95 p-1.5 shadow-2xl backdrop-blur-md z-50 text-left">
                         <div className="text-[10px] font-hud font-bold uppercase tracking-wider text-slate-400 px-2 py-1 mb-1 border-b border-slate-800">
-                          Rank Tier Telemetry
+                          Rank Tier
                         </div>
                         <div className="flex flex-col gap-0.5 font-hud">
                           {RANK_TIER_OPTIONS.map((tier) => {
