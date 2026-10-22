@@ -157,6 +157,19 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     };
   }, [activeSlot]);
 
+  // Check if any teammate in another lane is already locked
+  const hasOtherLockedAllies = useMemo(
+    () =>
+      targetTeamPicks.some(
+        (p, idx) =>
+          p &&
+          (!activeSlotTarget.hasActiveSlot || idx !== activeSlotTarget.slotIndex) &&
+          (!activeSlotTarget.targetLane ||
+            DEDICATED_LANES[idx]?.lane.toUpperCase() !== activeSlotTarget.targetLane.toUpperCase())
+      ),
+    [targetTeamPicks, activeSlotTarget]
+  );
+
   // Fast ID lookup maps for heroes & meta telemetry
   const { metaById, heroById } = useMemo(() => {
     const mById = new Map<number, (typeof metaHeroes)[number]>();
@@ -330,17 +343,33 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
         if (candidatesForEnemy.length > 0) {
           groupedCounters.push({
             targetHero: enemy,
-            candidates: candidatesForEnemy.slice(0, 3),
+            candidates: candidatesForEnemy.slice(0, 5),
           });
         }
       });
       groupedCounters.sort((a, b) => (b.candidates[0]?.score || 0) - (a.candidates[0]?.score || 0));
     }
 
+    // Filter allies strictly from OTHER lanes (exclude active slot and any ally in the same lane)
+    const validAllies = targetTeamPicks
+      .map((hero, idx) => ({ hero, idx }))
+      .filter((item): item is { hero: Hero; idx: number } => {
+        if (!item.hero) return false;
+        if (activeSlotTarget.hasActiveSlot && item.idx === activeSlotTarget.slotIndex) {
+          return false;
+        }
+        const slotLane = DEDICATED_LANES[item.idx]?.lane;
+        if (targetLane && slotLane && slotLane.toUpperCase() === targetLane.toUpperCase()) {
+          return false;
+        }
+        return true;
+      })
+      .map((item) => item.hero);
+
     // 2. BEST TEAMMATES (COMPATIBLE) — Grouped by target ally
     const groupedTeammates: GroupedTacticalMatchup[] = [];
-    if (targetLocked.length > 0) {
-      targetLocked.forEach((ally) => {
+    if (validAllies.length > 0) {
+      validAllies.forEach((ally) => {
         const allyId = Number(ally.id);
         const allyMeta = metaById.get(allyId);
         const allyMetrics = allyMeta ? getHeroMetricsForTier(allyMeta, rankTier) : null;
@@ -389,7 +418,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
         if (candidatesForAlly.length > 0) {
           groupedTeammates.push({
             targetHero: ally,
-            candidates: candidatesForAlly.slice(0, 3),
+            candidates: candidatesForAlly.slice(0, 5),
           });
         }
       });
@@ -447,7 +476,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
         if (vulnerableCandidates.length > 0) {
           groupedWeak.push({
             targetHero: enemy,
-            candidates: vulnerableCandidates.slice(0, 3),
+            candidates: vulnerableCandidates.slice(0, 5),
           });
         }
       });
@@ -456,8 +485,8 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
     // 4. POOR COMPATIBILITY (NOT COMPATIBLE) — Grouped by target ally
     const groupedPoor: GroupedTacticalMatchup[] = [];
-    if (targetLocked.length > 0) {
-      targetLocked.forEach((ally) => {
+    if (validAllies.length > 0) {
+      validAllies.forEach((ally) => {
         const allyId = Number(ally.id);
         const allyMeta = metaById.get(allyId);
         const allyMetrics = allyMeta ? getHeroMetricsForTier(allyMeta, rankTier) : null;
@@ -505,7 +534,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
         if (clashingCandidates.length > 0) {
           groupedPoor.push({
             targetHero: ally,
-            candidates: clashingCandidates.slice(0, 3),
+            candidates: clashingCandidates.slice(0, 5),
           });
         }
       });
@@ -513,10 +542,10 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
     }
 
     return {
-      bestCounters: groupedCounters.slice(0, 3),
-      bestTeammates: groupedTeammates.slice(0, 3),
-      weakAgainst: groupedWeak.slice(0, 3),
-      poorCompatibility: groupedPoor.slice(0, 3),
+      bestCounters: groupedCounters.slice(0, 5),
+      bestTeammates: groupedTeammates.slice(0, 5),
+      weakAgainst: groupedWeak.slice(0, 5),
+      poorCompatibility: groupedPoor.slice(0, 5),
     };
   }, [
     isBoardEmpty,
@@ -1103,7 +1132,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
                   {tacticalColumns.bestTeammates.length === 0 && (
                     <span className="text-slate-500 text-[10px] italic py-0.5">
-                      {targetLocked.length === 0 ? 'Awaiting team locks' : 'No compatible lane synergies found'}
+                      {!hasOtherLockedAllies ? 'Awaiting locks from other lanes' : 'No compatible lane synergies found'}
                     </span>
                   )}
                 </div>
@@ -1268,7 +1297,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
                   {tacticalColumns.poorCompatibility.length === 0 && (
                     <span className="text-slate-500 text-[10px] italic py-0.5">
-                      {targetLocked.length === 0 ? 'Awaiting team locks' : 'No major lineup clashes identified'}
+                      {!hasOtherLockedAllies ? 'Awaiting locks from other lanes' : 'No major lineup clashes identified'}
                     </span>
                   )}
                 </div>

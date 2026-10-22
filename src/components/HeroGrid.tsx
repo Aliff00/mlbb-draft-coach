@@ -144,7 +144,21 @@ export const HeroGrid: React.FC = () => {
     const targetLane = DEDICATED_LANES[activeSlot.index]?.lane;
 
     const enemyPicks = opposingTeamPicks.filter(Boolean) as Hero[];
-    const allyPicks = targetTeamPicks.filter(Boolean) as Hero[];
+    // Only consider allies from other lanes (exclude active slot and any hero in the same lane)
+    const allyPicks = targetTeamPicks
+      .map((hero, idx) => ({ hero, idx }))
+      .filter((item): item is { hero: Hero; idx: number } => {
+        if (!item.hero) return false;
+        if (activeSlot && activeSlot.type === 'PICK' && item.idx === activeSlot.index) {
+          return false;
+        }
+        const slotLane = DEDICATED_LANES[item.idx]?.lane;
+        if (targetLane && slotLane && slotLane.toUpperCase() === targetLane.toUpperCase()) {
+          return false;
+        }
+        return true;
+      })
+      .map((item) => item.hero);
 
     const metaMap = new Map(metaHeroes.map((m) => [m.id, m]));
 
@@ -235,8 +249,8 @@ export const HeroGrid: React.FC = () => {
     synergyScored.sort((a, b) => b.score - a.score);
 
     return {
-      topCounterHeroIds: new Set(counterScored.slice(0, 4).map((c) => String(c.id))),
-      topSynergyHeroIds: new Set(synergyScored.slice(0, 3).map((s) => String(s.id))),
+      topCounterHeroIds: new Set(counterScored.slice(0, 5).map((c) => String(c.id))),
+      topSynergyHeroIds: new Set(synergyScored.slice(0, 5).map((s) => String(s.id))),
     };
   }, [activeSlot, bluePicks, redPicks, unavailableHeroIds, rankTier]);
 
