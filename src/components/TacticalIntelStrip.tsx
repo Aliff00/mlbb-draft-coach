@@ -46,6 +46,11 @@ interface TacticalMatchupItem {
   statusBadge: 'BANNED' | 'PICKED' | null;
 }
 
+interface GroupedTacticalMatchup {
+  targetHero: Hero;
+  candidates: TacticalMatchupItem[];
+}
+
 function getHeroMetricsForTier(meta: any, tier: RankTier): HeroRankMetrics {
   if (meta?.ranks && meta.ranks[tier]) {
     return meta.ranks[tier];
@@ -256,10 +261,10 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
   const tacticalColumns = useMemo(() => {
     if (isBoardEmpty || !activeSlotTarget.hasActiveSlot) {
       return {
-        bestCounters: [] as TacticalMatchupItem[],
-        bestTeammates: [] as TacticalMatchupItem[],
-        weakAgainst: [] as TacticalMatchupItem[],
-        poorCompatibility: [] as TacticalMatchupItem[],
+        bestCounters: [] as GroupedTacticalMatchup[],
+        bestTeammates: [] as GroupedTacticalMatchup[],
+        weakAgainst: [] as GroupedTacticalMatchup[],
+        poorCompatibility: [] as GroupedTacticalMatchup[],
       };
     }
 
@@ -274,26 +279,20 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
       );
     });
 
-    // 1. ADVANTAGE VS ENEMY (BEST COUNTERS)
-    const counterItems: TacticalMatchupItem[] = [];
+    // 1. ADVANTAGE VS ENEMY (BEST COUNTERS) — Grouped by target enemy
+    const groupedCounters: GroupedTacticalMatchup[] = [];
     if (opposingLocked.length > 0) {
-      laneCandidates.forEach((candidateMeta) => {
-        const fullHero = heroById.get(candidateMeta.id);
-        if (!fullHero) return;
+      opposingLocked.forEach((enemy) => {
+        const enemyId = Number(enemy.id);
+        const enemyMeta = metaById.get(enemyId);
+        const enemyMetrics = enemyMeta ? getHeroMetricsForTier(enemyMeta, rankTier) : null;
+        const candidatesForEnemy: TacticalMatchupItem[] = [];
 
-        const candidateMetrics = getHeroMetricsForTier(candidateMeta, rankTier);
-        let bestScore = 0;
-        let matchedEnemy: Hero | null = null;
-        let matchedEnemyWr = 0;
-        let matchCount = 0;
+        laneCandidates.forEach((candidateMeta) => {
+          const fullHero = heroById.get(candidateMeta.id);
+          if (!fullHero) return;
 
-        opposingLocked.forEach((enemy) => {
-          const enemyId = Number(enemy.id);
-          const enemyMeta = metaById.get(enemyId);
-          const enemyMetrics = enemyMeta
-            ? getHeroMetricsForTier(enemyMeta, rankTier)
-            : null;
-
+          const candidateMetrics = getHeroMetricsForTier(candidateMeta, rankTier);
           const matchInCandidate = (candidateMetrics.best_counters || []).find(
             (b) => b.id === enemyId || (b as any).hero_id === enemyId || b.slug === enemy.slug
           );
@@ -306,64 +305,52 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
           const matched = matchInCandidate || matchInEnemy;
           if (matched) {
-            matchCount++;
             const score = matched.counter_score || 85;
             const wr = matched.win_rate ?? Math.round(candidateMetrics.win_rate || 50);
-            if (score > bestScore) {
-              bestScore = score;
-              matchedEnemy = enemy;
-              matchedEnemyWr = wr;
-            }
+            const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
+            const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
+
+            candidatesForEnemy.push({
+              hero: fullHero,
+              score,
+              badgeScore: score,
+              winRate: wr,
+              targetHero: enemy,
+              targetHeroName: enemy.name,
+              tooltip: `Counters ${enemy.name} (${wr}% WR) in ${activeRankOption.label}`,
+              isBanned: banned,
+              isPicked: picked,
+              isUnavailable: banned || picked,
+              statusBadge: banned ? 'BANNED' : picked ? 'PICKED' : null,
+            });
           }
         });
 
-        if (matchCount > 0 && matchedEnemy) {
-          const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
-          const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
-          let totalScore = bestScore * 2 + matchCount * 10;
-          if (
-            mapConfig.synergyHeroIds.includes(String(candidateMeta.id)) ||
-            (candidateMeta.slug && mapConfig.synergyHeroIds.includes(candidateMeta.slug))
-          ) {
-            totalScore += 5;
-          }
-
-          counterItems.push({
-            hero: fullHero,
-            score: totalScore,
-            badgeScore: bestScore,
-            winRate: matchedEnemyWr,
-            targetHero: matchedEnemy,
-            targetHeroName: (matchedEnemy as Hero).name,
-            tooltip: `Counters ${(matchedEnemy as Hero).name} (${matchedEnemyWr}% WR) in ${activeRankOption.label}`,
-            isBanned: banned,
-            isPicked: picked,
-            isUnavailable: banned || picked,
-            statusBadge: banned ? 'BANNED' : picked ? 'PICKED' : null,
+        candidatesForEnemy.sort((a, b) => b.score - a.score);
+        if (candidatesForEnemy.length > 0) {
+          groupedCounters.push({
+            targetHero: enemy,
+            candidates: candidatesForEnemy.slice(0, 3),
           });
         }
       });
-      counterItems.sort((a, b) => b.score - a.score);
+      groupedCounters.sort((a, b) => (b.candidates[0]?.score || 0) - (a.candidates[0]?.score || 0));
     }
 
-    // 2. BEST TEAMMATES (COMPATIBLE)
-    const teammateItems: TacticalMatchupItem[] = [];
+    // 2. BEST TEAMMATES (COMPATIBLE) — Grouped by target ally
+    const groupedTeammates: GroupedTacticalMatchup[] = [];
     if (targetLocked.length > 0) {
-      laneCandidates.forEach((candidateMeta) => {
-        const fullHero = heroById.get(candidateMeta.id);
-        if (!fullHero) return;
+      targetLocked.forEach((ally) => {
+        const allyId = Number(ally.id);
+        const allyMeta = metaById.get(allyId);
+        const allyMetrics = allyMeta ? getHeroMetricsForTier(allyMeta, rankTier) : null;
+        const candidatesForAlly: TacticalMatchupItem[] = [];
 
-        const candidateMetrics = getHeroMetricsForTier(candidateMeta, rankTier);
-        let bestScore = 0;
-        let matchedAlly: Hero | null = null;
-        let matchedAllyWr = 0;
-        let matchCount = 0;
+        laneCandidates.forEach((candidateMeta) => {
+          const fullHero = heroById.get(candidateMeta.id);
+          if (!fullHero) return;
 
-        targetLocked.forEach((ally) => {
-          const allyId = Number(ally.id);
-          const allyMeta = metaById.get(allyId);
-          const allyMetrics = allyMeta ? getHeroMetricsForTier(allyMeta, rankTier) : null;
-
+          const candidateMetrics = getHeroMetricsForTier(candidateMeta, rankTier);
           const matchInCandidate = (candidateMetrics.most_compatible || []).find(
             (s) => s.id === allyId || (s as any).hero_id === allyId || s.slug === ally.slug
           );
@@ -376,64 +363,53 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
           const matched = matchInCandidate || matchInAlly;
           if (matched) {
-            matchCount++;
             const score =
               matched.compatibility_score || matched.counter_score || (matched as any).synergy_score || 82;
             const wr = matched.win_rate ?? Math.round(candidateMetrics.win_rate || 50);
-            if (score > bestScore) {
-              bestScore = score;
-              matchedAlly = ally;
-              matchedAllyWr = wr;
-            }
+            const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
+            const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
+
+            candidatesForAlly.push({
+              hero: fullHero,
+              score,
+              badgeScore: score,
+              winRate: wr,
+              targetHero: ally,
+              targetHeroName: ally.name,
+              tooltip: `Compatible with ${ally.name} (${wr}% WR)`,
+              isBanned: banned,
+              isPicked: picked,
+              isUnavailable: banned || picked,
+              statusBadge: banned ? 'BANNED' : picked ? 'PICKED' : null,
+            });
           }
         });
 
-        if (matchCount > 0 && matchedAlly) {
-          const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
-          const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
-          let totalScore = bestScore * 2 + matchCount * 10;
-          if (
-            mapConfig.synergyHeroIds.includes(String(candidateMeta.id)) ||
-            (candidateMeta.slug && mapConfig.synergyHeroIds.includes(candidateMeta.slug))
-          ) {
-            totalScore += 5;
-          }
-
-          teammateItems.push({
-            hero: fullHero,
-            score: totalScore,
-            badgeScore: bestScore,
-            winRate: matchedAllyWr,
-            targetHero: matchedAlly,
-            targetHeroName: (matchedAlly as Hero).name,
-            tooltip: `High compatibility with ${(matchedAlly as Hero).name} (${matchedAllyWr}% WR)`,
-            isBanned: banned,
-            isPicked: picked,
-            isUnavailable: banned || picked,
-            statusBadge: banned ? 'BANNED' : picked ? 'PICKED' : null,
+        candidatesForAlly.sort((a, b) => b.score - a.score);
+        if (candidatesForAlly.length > 0) {
+          groupedTeammates.push({
+            targetHero: ally,
+            candidates: candidatesForAlly.slice(0, 3),
           });
         }
       });
-      teammateItems.sort((a, b) => b.score - a.score);
+      groupedTeammates.sort((a, b) => (b.candidates[0]?.score || 0) - (a.candidates[0]?.score || 0));
     }
 
-    // 3. WEAK AGAINST ENEMY (MOST COUNTERED BY)
-    const weakItems: TacticalMatchupItem[] = [];
+    // 3. WEAK AGAINST ENEMY (MOST COUNTERED BY) — Grouped by target enemy
+    const groupedWeak: GroupedTacticalMatchup[] = [];
     if (opposingLocked.length > 0) {
-      laneCandidates.forEach((candidateMeta) => {
-        const fullHero = heroById.get(candidateMeta.id);
-        if (!fullHero) return;
+      opposingLocked.forEach((enemy) => {
+        const enemyId = Number(enemy.id);
+        const enemyMeta = metaById.get(enemyId);
+        const enemyMetrics = enemyMeta ? getHeroMetricsForTier(enemyMeta, rankTier) : null;
+        const vulnerableCandidates: TacticalMatchupItem[] = [];
 
-        const candidateMetrics = getHeroMetricsForTier(candidateMeta, rankTier);
-        let worstScore = 0;
-        let dangerousEnemy: Hero | null = null;
-        let matchWr = 0;
+        laneCandidates.forEach((candidateMeta) => {
+          const fullHero = heroById.get(candidateMeta.id);
+          if (!fullHero) return;
 
-        opposingLocked.forEach((enemy) => {
-          const enemyId = Number(enemy.id);
-          const enemyMeta = metaById.get(enemyId);
-          const enemyMetrics = enemyMeta ? getHeroMetricsForTier(enemyMeta, rankTier) : null;
-
+          const candidateMetrics = getHeroMetricsForTier(candidateMeta, rankTier);
           const matchInCandidate = (candidateMetrics.countered_by || []).find(
             (c) => c.id === enemyId || (c as any).hero_id === enemyId || c.slug === enemy.slug
           );
@@ -448,53 +424,50 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
           if (matched) {
             const score = matched.counter_score || 85;
             const wr = matched.win_rate ?? 46;
-            if (score > worstScore) {
-              worstScore = score;
-              dangerousEnemy = enemy;
-              matchWr = wr;
-            }
+            const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
+            const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
+
+            vulnerableCandidates.push({
+              hero: fullHero,
+              score,
+              badgeScore: score,
+              winRate: wr,
+              targetHero: enemy,
+              targetHeroName: enemy.name,
+              tooltip: `Vulnerable to ${enemy.name} (${wr}% WR)`,
+              isBanned: banned,
+              isPicked: picked,
+              isUnavailable: banned || picked,
+              statusBadge: banned ? 'BANNED' : picked ? 'PICKED' : null,
+            });
           }
         });
 
-        if (worstScore > 0 && dangerousEnemy) {
-          const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
-          const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
-
-          weakItems.push({
-            hero: fullHero,
-            score: worstScore,
-            badgeScore: worstScore,
-            winRate: matchWr,
-            targetHero: dangerousEnemy,
-            targetHeroName: (dangerousEnemy as Hero).name,
-            tooltip: `Vulnerable to ${(dangerousEnemy as Hero).name} (${matchWr}% WR)`,
-            isBanned: banned,
-            isPicked: picked,
-            isUnavailable: banned || picked,
-            statusBadge: banned ? 'BANNED' : picked ? 'PICKED' : null,
+        vulnerableCandidates.sort((a, b) => b.score - a.score);
+        if (vulnerableCandidates.length > 0) {
+          groupedWeak.push({
+            targetHero: enemy,
+            candidates: vulnerableCandidates.slice(0, 3),
           });
         }
       });
-      weakItems.sort((a, b) => b.score - a.score);
+      groupedWeak.sort((a, b) => (b.candidates[0]?.score || 0) - (a.candidates[0]?.score || 0));
     }
 
-    // 4. POOR COMPATIBILITY (NOT COMPATIBLE)
-    const poorItems: TacticalMatchupItem[] = [];
+    // 4. POOR COMPATIBILITY (NOT COMPATIBLE) — Grouped by target ally
+    const groupedPoor: GroupedTacticalMatchup[] = [];
     if (targetLocked.length > 0) {
-      laneCandidates.forEach((candidateMeta) => {
-        const fullHero = heroById.get(candidateMeta.id);
-        if (!fullHero) return;
+      targetLocked.forEach((ally) => {
+        const allyId = Number(ally.id);
+        const allyMeta = metaById.get(allyId);
+        const allyMetrics = allyMeta ? getHeroMetricsForTier(allyMeta, rankTier) : null;
+        const clashingCandidates: TacticalMatchupItem[] = [];
 
-        const candidateMetrics = getHeroMetricsForTier(candidateMeta, rankTier);
-        let worstClashScore = 0;
-        let clashedAlly: Hero | null = null;
-        let matchWr = 0;
+        laneCandidates.forEach((candidateMeta) => {
+          const fullHero = heroById.get(candidateMeta.id);
+          if (!fullHero) return;
 
-        targetLocked.forEach((ally) => {
-          const allyId = Number(ally.id);
-          const allyMeta = metaById.get(allyId);
-          const allyMetrics = allyMeta ? getHeroMetricsForTier(allyMeta, rankTier) : null;
-
+          const candidateMetrics = getHeroMetricsForTier(candidateMeta, rankTier);
           const matchInCandidate = (candidateMetrics.least_compatible || []).find(
             (c) => c.id === allyId || (c as any).hero_id === allyId || c.slug === ally.slug
           );
@@ -509,41 +482,41 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
           if (matched) {
             const score = matched.compatibility_score || matched.counter_score || 75;
             const wr = matched.win_rate ?? 46;
-            if (score > worstClashScore) {
-              worstClashScore = score;
-              clashedAlly = ally;
-              matchWr = wr;
-            }
+            const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
+            const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
+
+            clashingCandidates.push({
+              hero: fullHero,
+              score,
+              badgeScore: score,
+              winRate: wr,
+              targetHero: ally,
+              targetHeroName: ally.name,
+              tooltip: `Low synergy clash with ${ally.name} (${wr}% WR)`,
+              isBanned: banned,
+              isPicked: picked,
+              isUnavailable: banned || picked,
+              statusBadge: banned ? 'BANNED' : picked ? 'PICKED' : null,
+            });
           }
         });
 
-        if (worstClashScore > 0 && clashedAlly) {
-          const banned = isHeroBanned(candidateMeta.id, candidateMeta.slug);
-          const picked = isHeroPicked(candidateMeta.id, candidateMeta.slug);
-
-          poorItems.push({
-            hero: fullHero,
-            score: worstClashScore,
-            badgeScore: worstClashScore,
-            winRate: matchWr,
-            targetHero: clashedAlly,
-            targetHeroName: (clashedAlly as Hero).name,
-            tooltip: `Low synergy clash with ${(clashedAlly as Hero).name} (${matchWr}% WR)`,
-            isBanned: banned,
-            isPicked: picked,
-            isUnavailable: banned || picked,
-            statusBadge: banned ? 'BANNED' : picked ? 'PICKED' : null,
+        clashingCandidates.sort((a, b) => b.score - a.score);
+        if (clashingCandidates.length > 0) {
+          groupedPoor.push({
+            targetHero: ally,
+            candidates: clashingCandidates.slice(0, 3),
           });
         }
       });
-      poorItems.sort((a, b) => b.score - a.score);
+      groupedPoor.sort((a, b) => (b.candidates[0]?.score || 0) - (a.candidates[0]?.score || 0));
     }
 
     return {
-      bestCounters: counterItems.slice(0, 3),
-      bestTeammates: teammateItems.slice(0, 3),
-      weakAgainst: weakItems.slice(0, 3),
-      poorCompatibility: poorItems.slice(0, 3),
+      bestCounters: groupedCounters.slice(0, 3),
+      bestTeammates: groupedTeammates.slice(0, 3),
+      weakAgainst: groupedWeak.slice(0, 3),
+      poorCompatibility: groupedPoor.slice(0, 3),
     };
   }, [
     isBoardEmpty,
@@ -995,61 +968,72 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  {tacticalColumns.bestCounters.map((item) => (
-                    <button
-                      key={`col-counter-${item.hero.id}`}
-                      type="button"
-                      onClick={() => !item.isUnavailable && handleHeroChipClick(item.hero)}
-                      disabled={item.isUnavailable}
-                      className={`flex items-center gap-2 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border transition ${
-                        item.isUnavailable
-                          ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
-                          : 'bg-slate-900/90 border-emerald-500/50 hover:border-emerald-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
-                      }`}
-                      title={item.tooltip}
+                <div className="flex flex-col gap-1.5">
+                  {tacticalColumns.bestCounters.map((group) => (
+                    <div
+                      key={`grp-counter-${group.targetHero.id}`}
+                      className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm flex-wrap sm:flex-nowrap"
                     >
-                      {/* Candidate Avatar with Score Badge */}
-                      <div className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-full flex-shrink-0">
-                        <div className="h-full w-full rounded-full overflow-hidden border border-emerald-500/70 bg-slate-900">
+                      {/* Target Locked Enemy */}
+                      <button
+                        type="button"
+                        onClick={() => setInspectedHero(group.targetHero)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-rose-950/40 border border-rose-500/40 hover:border-rose-400 text-left shrink-0 cursor-pointer transition shadow-sm"
+                        title={`Locked Enemy: ${group.targetHero.name} (Click to inspect)`}
+                      >
+                        <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full overflow-hidden border border-rose-500/60 bg-slate-950 shrink-0">
                           <img
-                            src={item.hero.avatar}
-                            alt={item.hero.name}
-                            className={`h-full w-full object-cover ${item.isUnavailable ? 'grayscale' : ''}`}
+                            src={group.targetHero.avatar}
+                            alt={group.targetHero.name}
+                            className="h-full w-full object-cover"
                           />
                         </div>
-                        <span className="absolute -bottom-1 -right-1 px-1.5 py-0.2 bg-emerald-950/95 text-emerald-300 border border-emerald-500/80 rounded-full text-[8.5px] font-hud font-bold leading-none shadow z-10">
-                          {item.badgeScore}
+                        <span className="font-hud font-bold text-[11px] sm:text-xs text-rose-300 truncate max-w-[80px] sm:max-w-[95px]">
+                          {group.targetHero.name}
                         </span>
-                        {item.statusBadge && (
-                          <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[7px] font-hud font-bold leading-none shadow z-20">
-                            {item.statusBadge === 'BANNED' ? '🚫' : '🔒'}
-                          </span>
-                        )}
+                      </button>
+
+                      <ArrowRight className="h-3 w-3 text-emerald-400 shrink-0 mx-0.5" />
+
+                      {/* Candidates for this enemy */}
+                      <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                        {group.candidates.map((cand) => (
+                          <button
+                            key={`cand-counter-${cand.hero.id}`}
+                            type="button"
+                            onClick={() => !cand.isUnavailable && handleHeroChipClick(cand.hero)}
+                            disabled={cand.isUnavailable}
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition ${
+                              cand.isUnavailable
+                                ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
+                                : 'bg-slate-900/90 border-emerald-500/50 hover:border-emerald-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                            }`}
+                            title={cand.tooltip}
+                          >
+                            <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full shrink-0">
+                              <div className="h-full w-full rounded-full overflow-hidden border border-emerald-500/70 bg-slate-900">
+                                <img
+                                  src={cand.hero.avatar}
+                                  alt={cand.hero.name}
+                                  className={`h-full w-full object-cover ${cand.isUnavailable ? 'grayscale' : ''}`}
+                                />
+                              </div>
+                              <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-emerald-950/95 text-emerald-300 border border-emerald-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                                {cand.badgeScore}
+                              </span>
+                              {cand.statusBadge && (
+                                <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
+                                  {cand.statusBadge === 'BANNED' ? '🚫' : '🔒'}
+                                </span>
+                              )}
+                            </div>
+                            <span className="font-hud font-bold text-[11px] sm:text-xs text-slate-200">
+                              {cand.hero.name}
+                            </span>
+                          </button>
+                        ))}
                       </div>
-
-                      {/* Candidate Name */}
-                      <span className="font-hud font-bold text-[11px] sm:text-xs text-slate-200">
-                        {item.hero.name}
-                      </span>
-
-                      {/* Attribution Target */}
-                      {item.targetHero && (
-                        <div className="flex items-center gap-1.5 pl-1.5 border-l border-slate-700/80 text-[9.5px] text-slate-400">
-                          <ArrowRight className="h-3 w-3 text-emerald-400/80 flex-shrink-0" />
-                          <div className="h-5 w-5 sm:h-5.5 sm:w-5.5 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
-                            <img
-                              src={item.targetHero.avatar}
-                              alt={item.targetHero.name}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                          <span className="text-slate-300 font-semibold truncate max-w-[75px] sm:max-w-[90px]">
-                            {item.targetHero.name}
-                          </span>
-                        </div>
-                      )}
-                    </button>
+                    </div>
                   ))}
 
                   {tacticalColumns.bestCounters.length === 0 && (
@@ -1061,7 +1045,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
               </div>
 
               {/* 2. Best Teammates (Compatible) */}
-              <div className="flex flex-col gap-1 pt-1.5 border-t border-slate-800/40">
+              <div className="flex flex-col gap-1.5 pt-1.5 border-t border-slate-800/40">
                 <div className="flex items-center justify-between text-[10px] font-hud font-bold text-slate-300 uppercase tracking-wide">
                   <span className="flex items-center gap-1 text-cyan-300">
                     <Users className="h-3 w-3 text-cyan-400" />
@@ -1069,61 +1053,72 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  {tacticalColumns.bestTeammates.map((item) => (
-                    <button
-                      key={`col-compat-${item.hero.id}`}
-                      type="button"
-                      onClick={() => !item.isUnavailable && handleHeroChipClick(item.hero)}
-                      disabled={item.isUnavailable}
-                      className={`flex items-center gap-2 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border transition ${
-                        item.isUnavailable
-                          ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
-                          : 'bg-slate-900/90 border-cyan-500/50 hover:border-cyan-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
-                      }`}
-                      title={item.tooltip}
+                <div className="flex flex-col gap-1.5">
+                  {tacticalColumns.bestTeammates.map((group) => (
+                    <div
+                      key={`grp-compat-${group.targetHero.id}`}
+                      className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm flex-wrap sm:flex-nowrap"
                     >
-                      {/* Candidate Avatar with Score Badge */}
-                      <div className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-full flex-shrink-0">
-                        <div className="h-full w-full rounded-full overflow-hidden border border-cyan-500/70 bg-slate-900">
+                      {/* Target Locked Ally */}
+                      <button
+                        type="button"
+                        onClick={() => setInspectedHero(group.targetHero)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-cyan-950/40 border border-cyan-500/40 hover:border-cyan-400 text-left shrink-0 cursor-pointer transition shadow-sm"
+                        title={`Locked Teammate: ${group.targetHero.name} (Click to inspect)`}
+                      >
+                        <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full overflow-hidden border border-cyan-500/60 bg-slate-950 shrink-0">
                           <img
-                            src={item.hero.avatar}
-                            alt={item.hero.name}
-                            className={`h-full w-full object-cover ${item.isUnavailable ? 'grayscale' : ''}`}
+                            src={group.targetHero.avatar}
+                            alt={group.targetHero.name}
+                            className="h-full w-full object-cover"
                           />
                         </div>
-                        <span className="absolute -bottom-1 -right-1 px-1.5 py-0.2 bg-cyan-950/95 text-cyan-300 border border-cyan-500/80 rounded-full text-[8.5px] font-hud font-bold leading-none shadow z-10">
-                          {item.badgeScore}
+                        <span className="font-hud font-bold text-[11px] sm:text-xs text-cyan-300 truncate max-w-[80px] sm:max-w-[95px]">
+                          {group.targetHero.name}
                         </span>
-                        {item.statusBadge && (
-                          <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[7px] font-hud font-bold leading-none shadow z-20">
-                            {item.statusBadge === 'BANNED' ? '🚫' : '🔒'}
-                          </span>
-                        )}
+                      </button>
+
+                      <ArrowRight className="h-3 w-3 text-cyan-400 shrink-0 mx-0.5" />
+
+                      {/* Candidates for this ally */}
+                      <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                        {group.candidates.map((cand) => (
+                          <button
+                            key={`cand-compat-${cand.hero.id}`}
+                            type="button"
+                            onClick={() => !cand.isUnavailable && handleHeroChipClick(cand.hero)}
+                            disabled={cand.isUnavailable}
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition ${
+                              cand.isUnavailable
+                                ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
+                                : 'bg-slate-900/90 border-cyan-500/50 hover:border-cyan-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                            }`}
+                            title={cand.tooltip}
+                          >
+                            <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full shrink-0">
+                              <div className="h-full w-full rounded-full overflow-hidden border border-cyan-500/70 bg-slate-900">
+                                <img
+                                  src={cand.hero.avatar}
+                                  alt={cand.hero.name}
+                                  className={`h-full w-full object-cover ${cand.isUnavailable ? 'grayscale' : ''}`}
+                                />
+                              </div>
+                              <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-cyan-950/95 text-cyan-300 border border-cyan-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                                {cand.badgeScore}
+                              </span>
+                              {cand.statusBadge && (
+                                <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
+                                  {cand.statusBadge === 'BANNED' ? '🚫' : '🔒'}
+                                </span>
+                              )}
+                            </div>
+                            <span className="font-hud font-bold text-[11px] sm:text-xs text-slate-200">
+                              {cand.hero.name}
+                            </span>
+                          </button>
+                        ))}
                       </div>
-
-                      {/* Candidate Name */}
-                      <span className="font-hud font-bold text-[11px] sm:text-xs text-slate-200">
-                        {item.hero.name}
-                      </span>
-
-                      {/* Attribution Target */}
-                      {item.targetHero && (
-                        <div className="flex items-center gap-1.5 pl-1.5 border-l border-slate-700/80 text-[9.5px] text-slate-400">
-                          <ArrowRight className="h-3 w-3 text-cyan-400/80 flex-shrink-0" />
-                          <div className="h-5 w-5 sm:h-5.5 sm:w-5.5 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
-                            <img
-                              src={item.targetHero.avatar}
-                              alt={item.targetHero.name}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                          <span className="text-slate-300 font-semibold truncate max-w-[75px] sm:max-w-[90px]">
-                            {item.targetHero.name}
-                          </span>
-                        </div>
-                      )}
-                    </button>
+                    </div>
                   ))}
 
                   {tacticalColumns.bestTeammates.length === 0 && (
@@ -1150,7 +1145,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
               </div>
 
               {/* 3. Weak Against Enemy (Most Countered By) */}
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between text-[10px] font-hud font-bold text-slate-300 uppercase tracking-wide">
                   <span className="flex items-center gap-1 text-rose-300">
                     <Swords className="h-3 w-3 text-rose-400" />
@@ -1158,61 +1153,72 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  {tacticalColumns.weakAgainst.map((item) => (
-                    <button
-                      key={`col-weak-${item.hero.id}`}
-                      type="button"
-                      onClick={() => !item.isUnavailable && handleHeroChipClick(item.hero)}
-                      disabled={item.isUnavailable}
-                      className={`flex items-center gap-2 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border transition ${
-                        item.isUnavailable
-                          ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
-                          : 'bg-slate-900/90 border-rose-500/50 hover:border-rose-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
-                      }`}
-                      title={item.tooltip}
+                <div className="flex flex-col gap-1.5">
+                  {tacticalColumns.weakAgainst.map((group) => (
+                    <div
+                      key={`grp-weak-${group.targetHero.id}`}
+                      className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm flex-wrap sm:flex-nowrap"
                     >
-                      {/* Candidate Avatar with Score Badge */}
-                      <div className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-full flex-shrink-0">
-                        <div className="h-full w-full rounded-full overflow-hidden border border-rose-500/70 bg-slate-900">
+                      {/* Target Locked Enemy */}
+                      <button
+                        type="button"
+                        onClick={() => setInspectedHero(group.targetHero)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-rose-950/40 border border-rose-500/40 hover:border-rose-400 text-left shrink-0 cursor-pointer transition shadow-sm"
+                        title={`Locked Enemy: ${group.targetHero.name} (Click to inspect)`}
+                      >
+                        <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full overflow-hidden border border-rose-500/60 bg-slate-950 shrink-0">
                           <img
-                            src={item.hero.avatar}
-                            alt={item.hero.name}
-                            className={`h-full w-full object-cover ${item.isUnavailable ? 'grayscale' : ''}`}
+                            src={group.targetHero.avatar}
+                            alt={group.targetHero.name}
+                            className="h-full w-full object-cover"
                           />
                         </div>
-                        <span className="absolute -bottom-1 -right-1 px-1.5 py-0.2 bg-rose-950/95 text-rose-300 border border-rose-500/80 rounded-full text-[8.5px] font-hud font-bold leading-none shadow z-10">
-                          {item.badgeScore}
+                        <span className="font-hud font-bold text-[11px] sm:text-xs text-rose-300 truncate max-w-[80px] sm:max-w-[95px]">
+                          {group.targetHero.name}
                         </span>
-                        {item.statusBadge && (
-                          <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[7px] font-hud font-bold leading-none shadow z-20">
-                            {item.statusBadge === 'BANNED' ? '🚫' : '🔒'}
-                          </span>
-                        )}
+                      </button>
+
+                      <ArrowRight className="h-3 w-3 text-rose-400 shrink-0 mx-0.5" />
+
+                      {/* Vulnerable Candidates for this enemy */}
+                      <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                        {group.candidates.map((cand) => (
+                          <button
+                            key={`cand-weak-${cand.hero.id}`}
+                            type="button"
+                            onClick={() => !cand.isUnavailable && handleHeroChipClick(cand.hero)}
+                            disabled={cand.isUnavailable}
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition ${
+                              cand.isUnavailable
+                                ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
+                                : 'bg-slate-900/90 border-rose-500/50 hover:border-rose-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                            }`}
+                            title={cand.tooltip}
+                          >
+                            <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full shrink-0">
+                              <div className="h-full w-full rounded-full overflow-hidden border border-rose-500/70 bg-slate-900">
+                                <img
+                                  src={cand.hero.avatar}
+                                  alt={cand.hero.name}
+                                  className={`h-full w-full object-cover ${cand.isUnavailable ? 'grayscale' : ''}`}
+                                />
+                              </div>
+                              <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-rose-950/95 text-rose-300 border border-rose-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                                {cand.badgeScore}
+                              </span>
+                              {cand.statusBadge && (
+                                <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
+                                  {cand.statusBadge === 'BANNED' ? '🚫' : '🔒'}
+                                </span>
+                              )}
+                            </div>
+                            <span className="font-hud font-bold text-[11px] sm:text-xs text-slate-200">
+                              {cand.hero.name}
+                            </span>
+                          </button>
+                        ))}
                       </div>
-
-                      {/* Candidate Name */}
-                      <span className="font-hud font-bold text-[11px] sm:text-xs text-slate-200">
-                        {item.hero.name}
-                      </span>
-
-                      {/* Attribution Target */}
-                      {item.targetHero && (
-                        <div className="flex items-center gap-1.5 pl-1.5 border-l border-slate-700/80 text-[9.5px] text-slate-400">
-                          <ArrowRight className="h-3 w-3 text-rose-400/80 flex-shrink-0" />
-                          <div className="h-5 w-5 sm:h-5.5 sm:w-5.5 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
-                            <img
-                              src={item.targetHero.avatar}
-                              alt={item.targetHero.name}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                          <span className="text-slate-300 font-semibold truncate max-w-[75px] sm:max-w-[90px]">
-                            {item.targetHero.name}
-                          </span>
-                        </div>
-                      )}
-                    </button>
+                    </div>
                   ))}
 
                   {tacticalColumns.weakAgainst.length === 0 && (
@@ -1224,7 +1230,7 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
               </div>
 
               {/* 4. Poor Compatibility (Not Compatible) */}
-              <div className="flex flex-col gap-1 pt-1.5 border-t border-slate-800/40">
+              <div className="flex flex-col gap-1.5 pt-1.5 border-t border-slate-800/40">
                 <div className="flex items-center justify-between text-[10px] font-hud font-bold text-slate-300 uppercase tracking-wide">
                   <span className="flex items-center gap-1 text-amber-300">
                     <ThumbsDown className="h-3 w-3 text-amber-400" />
@@ -1232,61 +1238,72 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  {tacticalColumns.poorCompatibility.map((item) => (
-                    <button
-                      key={`col-poor-${item.hero.id}`}
-                      type="button"
-                      onClick={() => !item.isUnavailable && handleHeroChipClick(item.hero)}
-                      disabled={item.isUnavailable}
-                      className={`flex items-center gap-2 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border transition ${
-                        item.isUnavailable
-                          ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
-                          : 'bg-slate-900/90 border-amber-500/50 hover:border-amber-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
-                      }`}
-                      title={item.tooltip}
+                <div className="flex flex-col gap-1.5">
+                  {tacticalColumns.poorCompatibility.map((group) => (
+                    <div
+                      key={`grp-poor-${group.targetHero.id}`}
+                      className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm flex-wrap sm:flex-nowrap"
                     >
-                      {/* Candidate Avatar with Score Badge */}
-                      <div className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-full flex-shrink-0">
-                        <div className="h-full w-full rounded-full overflow-hidden border border-amber-500/70 bg-slate-900">
+                      {/* Target Locked Ally */}
+                      <button
+                        type="button"
+                        onClick={() => setInspectedHero(group.targetHero)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-cyan-950/40 border border-cyan-500/40 hover:border-cyan-400 text-left shrink-0 cursor-pointer transition shadow-sm"
+                        title={`Locked Teammate: ${group.targetHero.name} (Click to inspect)`}
+                      >
+                        <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full overflow-hidden border border-cyan-500/60 bg-slate-950 shrink-0">
                           <img
-                            src={item.hero.avatar}
-                            alt={item.hero.name}
-                            className={`h-full w-full object-cover ${item.isUnavailable ? 'grayscale' : ''}`}
+                            src={group.targetHero.avatar}
+                            alt={group.targetHero.name}
+                            className="h-full w-full object-cover"
                           />
                         </div>
-                        <span className="absolute -bottom-1 -right-1 px-1.5 py-0.2 bg-amber-950/95 text-amber-300 border border-amber-500/80 rounded-full text-[8.5px] font-hud font-bold leading-none shadow z-10">
-                          {item.badgeScore}
+                        <span className="font-hud font-bold text-[11px] sm:text-xs text-cyan-300 truncate max-w-[80px] sm:max-w-[95px]">
+                          {group.targetHero.name}
                         </span>
-                        {item.statusBadge && (
-                          <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[7px] font-hud font-bold leading-none shadow z-20">
-                            {item.statusBadge === 'BANNED' ? '🚫' : '🔒'}
-                          </span>
-                        )}
+                      </button>
+
+                      <ArrowRight className="h-3 w-3 text-amber-400 shrink-0 mx-0.5" />
+
+                      {/* Low Synergy Candidates for this ally */}
+                      <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                        {group.candidates.map((cand) => (
+                          <button
+                            key={`cand-poor-${cand.hero.id}`}
+                            type="button"
+                            onClick={() => !cand.isUnavailable && handleHeroChipClick(cand.hero)}
+                            disabled={cand.isUnavailable}
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition ${
+                              cand.isUnavailable
+                                ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
+                                : 'bg-slate-900/90 border-amber-500/50 hover:border-amber-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                            }`}
+                            title={cand.tooltip}
+                          >
+                            <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full shrink-0">
+                              <div className="h-full w-full rounded-full overflow-hidden border border-amber-500/70 bg-slate-900">
+                                <img
+                                  src={cand.hero.avatar}
+                                  alt={cand.hero.name}
+                                  className={`h-full w-full object-cover ${cand.isUnavailable ? 'grayscale' : ''}`}
+                                />
+                              </div>
+                              <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-amber-950/95 text-amber-300 border border-amber-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                                {cand.badgeScore}
+                              </span>
+                              {cand.statusBadge && (
+                                <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
+                                  {cand.statusBadge === 'BANNED' ? '🚫' : '🔒'}
+                                </span>
+                              )}
+                            </div>
+                            <span className="font-hud font-bold text-[11px] sm:text-xs text-slate-200">
+                              {cand.hero.name}
+                            </span>
+                          </button>
+                        ))}
                       </div>
-
-                      {/* Candidate Name */}
-                      <span className="font-hud font-bold text-[11px] sm:text-xs text-slate-200">
-                        {item.hero.name}
-                      </span>
-
-                      {/* Attribution Target */}
-                      {item.targetHero && (
-                        <div className="flex items-center gap-1.5 pl-1.5 border-l border-slate-700/80 text-[9.5px] text-slate-400">
-                          <ArrowRight className="h-3 w-3 text-amber-400/80 flex-shrink-0" />
-                          <div className="h-5 w-5 sm:h-5.5 sm:w-5.5 rounded-full overflow-hidden border border-slate-700 flex-shrink-0">
-                            <img
-                              src={item.targetHero.avatar}
-                              alt={item.targetHero.name}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                          <span className="text-slate-300 font-semibold truncate max-w-[75px] sm:max-w-[90px]">
-                            {item.targetHero.name}
-                          </span>
-                        </div>
-                      )}
-                    </button>
+                    </div>
                   ))}
 
                   {tacticalColumns.poorCompatibility.length === 0 && (
