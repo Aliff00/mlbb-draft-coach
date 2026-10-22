@@ -249,7 +249,7 @@ export const HeroGrid: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsSearchOpen((prev) => !prev)}
-            title="Search heroes strictly by name"
+            title="Search hero by name"
             className={`h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full flex items-center justify-center border transition-all cursor-pointer shrink-0 ${
               isSearchOpen || searchQuery
                 ? 'bg-gradient-to-t from-white/20 via-white/5 to-transparent text-white border-slate-700 shadow-[inset_0_-2px_0_rgba(255,255,255,0.75)]'
@@ -416,7 +416,7 @@ export const HeroGrid: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search hero strictly by name..."
+                placeholder="Search hero by name..."
                 autoFocus
                 className="w-full rounded-none border border-slate-700/80 bg-slate-950/90 pl-8 pr-7 py-1 text-xs text-white placeholder-slate-400 focus:border-white/60 focus:bg-white/[0.03] focus:outline-none font-body shadow-inner"
               />
