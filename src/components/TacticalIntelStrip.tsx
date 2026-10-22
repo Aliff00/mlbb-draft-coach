@@ -990,41 +990,36 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
                       <ArrowRight className="h-3 w-3 text-emerald-400 shrink-0 mx-0.5" />
 
-                      {/* Candidates for this enemy */}
-                      <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                      {/* Candidates for this enemy (Avatar only) */}
+                      <div className="flex items-center gap-2 flex-wrap flex-1">
                         {group.candidates.map((cand) => (
                           <button
                             key={`cand-counter-${cand.hero.id}`}
                             type="button"
                             onClick={() => !cand.isUnavailable && handleHeroChipClick(cand.hero)}
                             disabled={cand.isUnavailable}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition ${
+                            className={`relative h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full overflow-visible shrink-0 transition-transform duration-150 ${
                               cand.isUnavailable
-                                ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
-                                : 'bg-slate-900/90 border-emerald-500/50 hover:border-emerald-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                                ? 'opacity-40 pointer-events-none'
+                                : 'cursor-pointer hover:scale-110 active:scale-95'
                             }`}
                             title={cand.tooltip}
                           >
-                            <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full shrink-0">
-                              <div className="h-full w-full rounded-full overflow-hidden border border-emerald-500/70 bg-slate-900">
-                                <img
-                                  src={cand.hero.avatar}
-                                  alt={cand.hero.name}
-                                  className={`h-full w-full object-cover ${cand.isUnavailable ? 'grayscale' : ''}`}
-                                />
-                              </div>
-                              <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-emerald-950/95 text-emerald-300 border border-emerald-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
-                                {cand.badgeScore}
-                              </span>
-                              {cand.statusBadge && (
-                                <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
-                                  {cand.statusBadge === 'BANNED' ? '🚫' : '🔒'}
-                                </span>
-                              )}
+                            <div className="h-full w-full rounded-full overflow-hidden border border-emerald-500/80 bg-slate-950 shadow-sm">
+                              <img
+                                src={cand.hero.avatar}
+                                alt={cand.hero.name}
+                                className={`h-full w-full object-cover ${cand.isUnavailable ? 'grayscale' : ''}`}
+                              />
                             </div>
-                            <span className="font-hud font-bold text-[11px] sm:text-xs text-slate-200">
-                              {cand.hero.name}
+                            <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-emerald-950/95 text-emerald-300 border border-emerald-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                              {cand.badgeScore}
                             </span>
+                            {cand.statusBadge && (
+                              <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
+                                {cand.statusBadge === 'BANNED' ? '🚫' : '🔒'}
+                              </span>
+                            )}
                           </button>
                         ))}
                       </div>
@@ -1070,41 +1065,36 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
                       <ArrowRight className="h-3 w-3 text-cyan-400 shrink-0 mx-0.5" />
 
-                      {/* Candidates for this ally */}
-                      <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                      {/* Candidates for this ally (Avatar only) */}
+                      <div className="flex items-center gap-2 flex-wrap flex-1">
                         {group.candidates.map((cand) => (
                           <button
                             key={`cand-compat-${cand.hero.id}`}
                             type="button"
                             onClick={() => !cand.isUnavailable && handleHeroChipClick(cand.hero)}
                             disabled={cand.isUnavailable}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition ${
+                            className={`relative h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full overflow-visible shrink-0 transition-transform duration-150 ${
                               cand.isUnavailable
-                                ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
-                                : 'bg-slate-900/90 border-cyan-500/50 hover:border-cyan-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                                ? 'opacity-40 pointer-events-none'
+                                : 'cursor-pointer hover:scale-110 active:scale-95'
                             }`}
                             title={cand.tooltip}
                           >
-                            <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full shrink-0">
-                              <div className="h-full w-full rounded-full overflow-hidden border border-cyan-500/70 bg-slate-900">
-                                <img
-                                  src={cand.hero.avatar}
-                                  alt={cand.hero.name}
-                                  className={`h-full w-full object-cover ${cand.isUnavailable ? 'grayscale' : ''}`}
-                                />
-                              </div>
-                              <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-cyan-950/95 text-cyan-300 border border-cyan-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
-                                {cand.badgeScore}
-                              </span>
-                              {cand.statusBadge && (
-                                <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
-                                  {cand.statusBadge === 'BANNED' ? '🚫' : '🔒'}
-                                </span>
-                              )}
+                            <div className="h-full w-full rounded-full overflow-hidden border border-cyan-500/80 bg-slate-950 shadow-sm">
+                              <img
+                                src={cand.hero.avatar}
+                                alt={cand.hero.name}
+                                className={`h-full w-full object-cover ${cand.isUnavailable ? 'grayscale' : ''}`}
+                              />
                             </div>
-                            <span className="font-hud font-bold text-[11px] sm:text-xs text-slate-200">
-                              {cand.hero.name}
+                            <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-cyan-950/95 text-cyan-300 border border-cyan-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                              {cand.badgeScore}
                             </span>
+                            {cand.statusBadge && (
+                              <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
+                                {cand.statusBadge === 'BANNED' ? '🚫' : '🔒'}
+                              </span>
+                            )}
                           </button>
                         ))}
                       </div>
@@ -1165,41 +1155,36 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
                       <ArrowRight className="h-3 w-3 text-rose-400 shrink-0 mx-0.5" />
 
-                      {/* Vulnerable Candidates for this enemy */}
-                      <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                      {/* Vulnerable Candidates for this enemy (Avatar only) */}
+                      <div className="flex items-center gap-2 flex-wrap flex-1">
                         {group.candidates.map((cand) => (
                           <button
                             key={`cand-weak-${cand.hero.id}`}
                             type="button"
                             onClick={() => !cand.isUnavailable && handleHeroChipClick(cand.hero)}
                             disabled={cand.isUnavailable}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition ${
+                            className={`relative h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full overflow-visible shrink-0 transition-transform duration-150 ${
                               cand.isUnavailable
-                                ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
-                                : 'bg-slate-900/90 border-rose-500/50 hover:border-rose-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                                ? 'opacity-40 pointer-events-none'
+                                : 'cursor-pointer hover:scale-110 active:scale-95'
                             }`}
                             title={cand.tooltip}
                           >
-                            <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full shrink-0">
-                              <div className="h-full w-full rounded-full overflow-hidden border border-rose-500/70 bg-slate-900">
-                                <img
-                                  src={cand.hero.avatar}
-                                  alt={cand.hero.name}
-                                  className={`h-full w-full object-cover ${cand.isUnavailable ? 'grayscale' : ''}`}
-                                />
-                              </div>
-                              <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-rose-950/95 text-rose-300 border border-rose-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
-                                {cand.badgeScore}
-                              </span>
-                              {cand.statusBadge && (
-                                <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
-                                  {cand.statusBadge === 'BANNED' ? '🚫' : '🔒'}
-                                </span>
-                              )}
+                            <div className="h-full w-full rounded-full overflow-hidden border border-rose-500/80 bg-slate-950 shadow-sm">
+                              <img
+                                src={cand.hero.avatar}
+                                alt={cand.hero.name}
+                                className={`h-full w-full object-cover ${cand.isUnavailable ? 'grayscale' : ''}`}
+                              />
                             </div>
-                            <span className="font-hud font-bold text-[11px] sm:text-xs text-slate-200">
-                              {cand.hero.name}
+                            <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-rose-950/95 text-rose-300 border border-rose-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                              {cand.badgeScore}
                             </span>
+                            {cand.statusBadge && (
+                              <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
+                                {cand.statusBadge === 'BANNED' ? '🚫' : '🔒'}
+                              </span>
+                            )}
                           </button>
                         ))}
                       </div>
@@ -1245,41 +1230,36 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
 
                       <ArrowRight className="h-3 w-3 text-amber-400 shrink-0 mx-0.5" />
 
-                      {/* Low Synergy Candidates for this ally */}
-                      <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                      {/* Low Synergy Candidates for this ally (Avatar only) */}
+                      <div className="flex items-center gap-2 flex-wrap flex-1">
                         {group.candidates.map((cand) => (
                           <button
                             key={`cand-poor-${cand.hero.id}`}
                             type="button"
                             onClick={() => !cand.isUnavailable && handleHeroChipClick(cand.hero)}
                             disabled={cand.isUnavailable}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition ${
+                            className={`relative h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full overflow-visible shrink-0 transition-transform duration-150 ${
                               cand.isUnavailable
-                                ? 'bg-slate-900/30 border-slate-800/40 opacity-40 pointer-events-none'
-                                : 'bg-slate-900/90 border-amber-500/50 hover:border-amber-400 hover:bg-slate-800/90 cursor-pointer shadow-sm active:scale-95'
+                                ? 'opacity-40 pointer-events-none'
+                                : 'cursor-pointer hover:scale-110 active:scale-95'
                             }`}
                             title={cand.tooltip}
                           >
-                            <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full shrink-0">
-                              <div className="h-full w-full rounded-full overflow-hidden border border-amber-500/70 bg-slate-900">
-                                <img
-                                  src={cand.hero.avatar}
-                                  alt={cand.hero.name}
-                                  className={`h-full w-full object-cover ${cand.isUnavailable ? 'grayscale' : ''}`}
-                                />
-                              </div>
-                              <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-amber-950/95 text-amber-300 border border-amber-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
-                                {cand.badgeScore}
-                              </span>
-                              {cand.statusBadge && (
-                                <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
-                                  {cand.statusBadge === 'BANNED' ? '🚫' : '🔒'}
-                                </span>
-                              )}
+                            <div className="h-full w-full rounded-full overflow-hidden border border-amber-500/80 bg-slate-950 shadow-sm">
+                              <img
+                                src={cand.hero.avatar}
+                                alt={cand.hero.name}
+                                className={`h-full w-full object-cover ${cand.isUnavailable ? 'grayscale' : ''}`}
+                              />
                             </div>
-                            <span className="font-hud font-bold text-[11px] sm:text-xs text-slate-200">
-                              {cand.hero.name}
+                            <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-amber-950/95 text-amber-300 border border-amber-500/80 rounded-full text-[7.5px] font-hud font-bold leading-none shadow z-10">
+                              {cand.badgeScore}
                             </span>
+                            {cand.statusBadge && (
+                              <span className="absolute -top-1 -right-1 px-1 py-0.2 bg-red-950 text-red-200 border border-red-500 rounded text-[6.5px] font-hud font-bold leading-none shadow z-20">
+                                {cand.statusBadge === 'BANNED' ? '🚫' : '🔒'}
+                              </span>
+                            )}
                           </button>
                         ))}
                       </div>
