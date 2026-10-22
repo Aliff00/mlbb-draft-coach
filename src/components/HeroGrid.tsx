@@ -444,10 +444,10 @@ export const HeroGrid: React.FC = () => {
         )}
       </div>
 
-      {/* Dense Circular Hero Avatar Grid with Stable Reserved Scrollbar Gutter */}
+      {/* 4-Row Dense Circular Hero Avatar Grid with Stable Reserved Scrollbar Gutter */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto pr-1"
+        className="h-[310px] sm:h-[345px] lg:h-[365px] shrink-0 overflow-y-auto pr-1"
         style={{ scrollbarGutter: 'stable' }}
       >
         <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
@@ -574,8 +574,8 @@ export const HeroGrid: React.FC = () => {
         </div>
       </div>
 
-      {/* Tactical Intel Strip (Mounted directly beneath the hero roster grid) */}
-      <TacticalIntelStrip />
+      {/* Tactical Intel Strip (Mounted directly beneath the 4-row hero roster grid, taking expanded space) */}
+      <TacticalIntelStrip className="flex-1 min-h-0" />
     </section>
   );
 };
