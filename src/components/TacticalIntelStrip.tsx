@@ -974,23 +974,18 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                       key={`grp-counter-${group.targetHero.id}`}
                       className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm flex-wrap sm:flex-nowrap"
                     >
-                      {/* Target Locked Enemy */}
+                      {/* Target Locked Enemy (Avatar only) */}
                       <button
                         type="button"
                         onClick={() => setInspectedHero(group.targetHero)}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-rose-950/40 border border-rose-500/40 hover:border-rose-400 text-left shrink-0 cursor-pointer transition shadow-sm"
+                        className="relative h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full overflow-hidden border border-rose-500/80 bg-slate-950 shrink-0 cursor-pointer hover:border-rose-300 hover:scale-105 active:scale-95 transition shadow-sm"
                         title={`Locked Enemy: ${group.targetHero.name} (Click to inspect)`}
                       >
-                        <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full overflow-hidden border border-rose-500/60 bg-slate-950 shrink-0">
-                          <img
-                            src={group.targetHero.avatar}
-                            alt={group.targetHero.name}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                        <span className="font-hud font-bold text-[11px] sm:text-xs text-rose-300 truncate max-w-[80px] sm:max-w-[95px]">
-                          {group.targetHero.name}
-                        </span>
+                        <img
+                          src={group.targetHero.avatar}
+                          alt={group.targetHero.name}
+                          className="h-full w-full object-cover"
+                        />
                       </button>
 
                       <ArrowRight className="h-3 w-3 text-emerald-400 shrink-0 mx-0.5" />
@@ -1059,23 +1054,18 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                       key={`grp-compat-${group.targetHero.id}`}
                       className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm flex-wrap sm:flex-nowrap"
                     >
-                      {/* Target Locked Ally */}
+                      {/* Target Locked Ally (Avatar only) */}
                       <button
                         type="button"
                         onClick={() => setInspectedHero(group.targetHero)}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-cyan-950/40 border border-cyan-500/40 hover:border-cyan-400 text-left shrink-0 cursor-pointer transition shadow-sm"
+                        className="relative h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full overflow-hidden border border-cyan-500/80 bg-slate-950 shrink-0 cursor-pointer hover:border-cyan-300 hover:scale-105 active:scale-95 transition shadow-sm"
                         title={`Locked Teammate: ${group.targetHero.name} (Click to inspect)`}
                       >
-                        <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full overflow-hidden border border-cyan-500/60 bg-slate-950 shrink-0">
-                          <img
-                            src={group.targetHero.avatar}
-                            alt={group.targetHero.name}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                        <span className="font-hud font-bold text-[11px] sm:text-xs text-cyan-300 truncate max-w-[80px] sm:max-w-[95px]">
-                          {group.targetHero.name}
-                        </span>
+                        <img
+                          src={group.targetHero.avatar}
+                          alt={group.targetHero.name}
+                          className="h-full w-full object-cover"
+                        />
                       </button>
 
                       <ArrowRight className="h-3 w-3 text-cyan-400 shrink-0 mx-0.5" />
@@ -1159,23 +1149,18 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                       key={`grp-weak-${group.targetHero.id}`}
                       className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm flex-wrap sm:flex-nowrap"
                     >
-                      {/* Target Locked Enemy */}
+                      {/* Target Locked Enemy (Avatar only) */}
                       <button
                         type="button"
                         onClick={() => setInspectedHero(group.targetHero)}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-rose-950/40 border border-rose-500/40 hover:border-rose-400 text-left shrink-0 cursor-pointer transition shadow-sm"
+                        className="relative h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full overflow-hidden border border-rose-500/80 bg-slate-950 shrink-0 cursor-pointer hover:border-rose-300 hover:scale-105 active:scale-95 transition shadow-sm"
                         title={`Locked Enemy: ${group.targetHero.name} (Click to inspect)`}
                       >
-                        <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full overflow-hidden border border-rose-500/60 bg-slate-950 shrink-0">
-                          <img
-                            src={group.targetHero.avatar}
-                            alt={group.targetHero.name}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                        <span className="font-hud font-bold text-[11px] sm:text-xs text-rose-300 truncate max-w-[80px] sm:max-w-[95px]">
-                          {group.targetHero.name}
-                        </span>
+                        <img
+                          src={group.targetHero.avatar}
+                          alt={group.targetHero.name}
+                          className="h-full w-full object-cover"
+                        />
                       </button>
 
                       <ArrowRight className="h-3 w-3 text-rose-400 shrink-0 mx-0.5" />
@@ -1244,23 +1229,18 @@ export const TacticalIntelStrip: React.FC<TacticalIntelStripProps> = ({
                       key={`grp-poor-${group.targetHero.id}`}
                       className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm flex-wrap sm:flex-nowrap"
                     >
-                      {/* Target Locked Ally */}
+                      {/* Target Locked Ally (Avatar only) */}
                       <button
                         type="button"
                         onClick={() => setInspectedHero(group.targetHero)}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-cyan-950/40 border border-cyan-500/40 hover:border-cyan-400 text-left shrink-0 cursor-pointer transition shadow-sm"
+                        className="relative h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-full overflow-hidden border border-cyan-500/80 bg-slate-950 shrink-0 cursor-pointer hover:border-cyan-300 hover:scale-105 active:scale-95 transition shadow-sm"
                         title={`Locked Teammate: ${group.targetHero.name} (Click to inspect)`}
                       >
-                        <div className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full overflow-hidden border border-cyan-500/60 bg-slate-950 shrink-0">
-                          <img
-                            src={group.targetHero.avatar}
-                            alt={group.targetHero.name}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                        <span className="font-hud font-bold text-[11px] sm:text-xs text-cyan-300 truncate max-w-[80px] sm:max-w-[95px]">
-                          {group.targetHero.name}
-                        </span>
+                        <img
+                          src={group.targetHero.avatar}
+                          alt={group.targetHero.name}
+                          className="h-full w-full object-cover"
+                        />
                       </button>
 
                       <ArrowRight className="h-3 w-3 text-amber-400 shrink-0 mx-0.5" />
